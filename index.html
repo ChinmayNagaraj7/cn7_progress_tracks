@@ -366,14 +366,17 @@ function getCloudGistId(){ return localStorage.getItem(CLOUD_GISTID_KEY) || null
 function setCloudGistId(id){ if(id) localStorage.setItem(CLOUD_GISTID_KEY, id); else localStorage.removeItem(CLOUD_GISTID_KEY); }
 function cloudEnabled(){ return !!getCloudToken(); }
 
+// --- UPDATED: Added timestamp to force fresh data ---
 async function findExistingGist(token) {
-  const url = 'https://api.github.com/gists';
-  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
+  // Add timestamp to prevent caching of the Gist list
+  const url = 'https://api.github.com/gists?cb=' + new Date().getTime();
+  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token, 'Cache-Control': 'no-cache' } });
   if(!res.ok) return null;
   const gists = await res.json();
   const found = gists.find(g => g.files && g.files[CLOUD_FILENAME]);
   return found ? found.id : null;
 }
+
 async function createGist(token, contentStr){
   const url = 'https://api.github.com/gists';
   const body = { description: CLOUD_DESCRIPTION, public: false, files: { [CLOUD_FILENAME]: { content: contentStr } } };
@@ -381,6 +384,7 @@ async function createGist(token, contentStr){
   if(!res.ok) throw new Error('Create gist failed');
   return await res.json();
 }
+
 async function updateGist(token, gistId, contentStr){
   const url = `https://api.github.com/gists/${gistId}`;
   const body = { files: { [CLOUD_FILENAME]: { content: contentStr } } };
@@ -388,9 +392,11 @@ async function updateGist(token, gistId, contentStr){
   if(!res.ok) throw new Error('Update gist failed');
   return await res.json();
 }
+
+// --- UPDATED: Added timestamp to fetch to break cache ---
 async function fetchGistContent(token, gistId){
-  const url = `https://api.github.com/gists/${gistId}`;
-  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
+  const url = `https://api.github.com/gists/${gistId}?timestamp=${new Date().getTime()}`;
+  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token, 'Cache-Control': 'no-cache' } });
   if(!res.ok) throw new Error('Fetch gist failed');
   const data = await res.json();
   if(!data.files || !data.files[CLOUD_FILENAME]) throw new Error('Gist missing file');
@@ -420,26 +426,38 @@ async function loadFromCloudAndMerge(){
   if(!cloudEnabled()) return;
   const token = getCloudToken();
   let gistId = getCloudGistId();
-  if(!gistId) { try { gistId = await findExistingGist(token); if(gistId) setCloudGistId(gistId); } catch(e) { console.error(e); } }
+  
+  // Try to find ID if missing
+  if(!gistId) { 
+      try { gistId = await findExistingGist(token); if(gistId) setCloudGistId(gistId); } 
+      catch(e) { console.error(e); } 
+  }
   if(!gistId) { setSyncStatus('no gist'); return; }
+
   try{
     setSyncStatus('loading...');
     const content = await fetchGistContent(token, gistId);
-    STORE = mergeStores(STORE, ensureStoreShape(JSON.parse(content)));
+    const parsed = JSON.parse(content);
+    
+    // IMPORTANT: Cloud is the source of truth. Merge intelligently.
+    STORE = mergeStores(STORE, parsed);
     saveData(STORE);
     renderAll();
     setSyncStatus('synced');
-  } catch(err){ console.error('Cloud load failed', err); setSyncStatus('error'); }
+  } catch(err){ 
+      console.error('Cloud load failed', err); 
+      setSyncStatus('error'); 
+  }
 }
 
 function createSyncControls(){
   const header = document.querySelector('header');
   const ctr = document.createElement('div');
   ctr.style.marginTop = '15px'; ctr.style.display = 'flex'; ctr.style.gap = '8px'; ctr.style.justifyContent = 'center'; ctr.style.flexWrap = 'wrap';
+  
   const btnEnable = document.createElement('button');
   btnEnable.className = 'btn btn-primary';
-  btnEnable.id = 'syncBtn';
-  // btnEnable.textContent = cloudEnabled() ? 'Cloud Sync: On' : 'Enable Cloud Sync';
+  btnEnable.textContent = cloudEnabled() ? 'Cloud Sync: On' : 'Enable Cloud Sync';
   btnEnable.onclick = async ()=>{
     if(cloudEnabled()){ if(confirm('Disable sync?')) { setCloudToken(null); setCloudGistId(null); setSyncStatus('disabled'); btnEnable.textContent = 'Enable Cloud Sync'; } return; }
     const token = prompt('Paste GitHub Token (gist permission):');
@@ -449,11 +467,25 @@ function createSyncControls(){
     await loadFromCloudAndMerge();
     btnEnable.textContent = 'Cloud Sync: On';
   };
+
+  // NEW: Refresh Button
+  const btnRefresh = document.createElement('button');
+  btnRefresh.className = 'btn btn-secondary';
+  btnRefresh.textContent = '🔄 Sync Now';
+  btnRefresh.onclick = async () => {
+      if(!cloudEnabled()) return alert('Enable Cloud Sync first');
+      await loadFromCloudAndMerge();
+      showToast('Synced with Cloud');
+  };
+
   const status = document.createElement('div');
   status.id = 'cloudSyncStatus';
   status.style.fontSize = '12px'; status.style.padding = '8px'; status.style.borderRadius = '6px'; status.style.background = '#eef2ff';
   status.textContent = cloudEnabled() ? 'Cloud: Ready' : 'Cloud: Disabled';
-  ctr.appendChild(btnEnable); ctr.appendChild(status);
+  
+  ctr.appendChild(btnEnable); 
+  ctr.appendChild(btnRefresh); // Added refresh button
+  ctr.appendChild(status);
   header.appendChild(ctr);
 }
 function setSyncStatus(txt){ const el = document.getElementById('cloudSyncStatus'); if(el) el.textContent = 'Cloud: ' + txt; }
@@ -526,15 +558,15 @@ document.getElementById('import').onclick = () => document.getElementById('fileI
 document.getElementById('fileInput').onchange = (e) => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { try{ STORE = mergeStores(STORE, JSON.parse(ev.target.result)); saveData(STORE); renderAll(); if(cloudEnabled()) scheduledCloudSave(); }catch(e){alert('Invalid JSON');} }; r.readAsText(f); };
 
 // --- 🚀 MAGIC LINK LOGIC ---
-// 1. Check URL for ?token=ghp_xxxx
 const params = new URLSearchParams(window.location.search);
 if(params.has('token')){
     const t = params.get('token');
     if(t && t.startsWith('ghp_')){
         setCloudToken(t);
-        // Remove token from URL bar so it looks clean and safe
         window.history.replaceState({}, document.title, window.location.pathname);
         showToast('Auto-login successful! 🔓');
+        // FORCE LOAD on login
+        loadFromCloudAndMerge();
     }
 }
 
@@ -542,6 +574,5 @@ if(params.has('token')){
 createSyncControls();
 renderAll();
 if(cloudEnabled()) loadFromCloudAndMerge();
-
 </script>
 </body>
