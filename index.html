@@ -57,6 +57,38 @@
 
     footer{margin-top:18px;text-align:center;color:#475569;font-size:13px}
     @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+
+    /* Status Badge Styles */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.1);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 12px;
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+}
+.status-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
+    transition: background 0.3s;
+}
+/* States */
+.status-badge.success { background: rgba(20, 184, 166, 0.15); border-color: rgba(20, 184, 166, 0.3); color: #ccfbf1; }
+.status-badge.success .status-dot { background: #2dd4bf; box-shadow: 0 0 8px #2dd4bf; }
+
+.status-badge.working { background: rgba(234, 179, 8, 0.15); border-color: rgba(234, 179, 8, 0.3); color: #fef9c3; }
+.status-badge.working .status-dot { background: #facc15; animation: pulse 1.5s infinite; }
+
+.status-badge.error { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #fee2e2; }
+.status-badge.error .status-dot { background: #f87171; box-shadow: 0 0 8px #f87171; }
+
+@keyframes pulse { 0% {opacity:1} 50% {opacity:.4} 100% {opacity:1} }
   </style>
 </head>
 <body>
@@ -68,15 +100,16 @@
   <div class="container">
     <div class="grid">
       <div class="card">
-        <h2>Priority System (Most → Least)</h2>
+        <h2>Priority System 😀 </h2>
         <div class="priority">
-          <div class="priority-item"><div class="pri-badge">1</div><div class="pri-meta"><div class="meta-title">Backend + System Design — 60 min</div><div class="meta-sub">Deep projects: scalable services, queues, caching</div></div></div>
-          <div class="priority-item"><div class="pri-badge">2</div><div class="pri-meta"><div class="meta-title">DSA (c++) — 60 min</div><div class="meta-sub">Focused problem solving: 200–250 quality problems</div></div></div>
-          <div class="priority-item"><div class="pri-badge">3</div><div class="pri-meta"><div class="meta-title">CS Fundamentals — 30 min</div><div class="meta-sub">OS/DBMS/Networks/System design basics</div></div></div>
-          <div class="priority-item"><div class="pri-badge">4</div><div class="pri-meta"><div class="meta-title">GitHub & Resume — 30 min (3 days/week)</div><div class="meta-sub">Polish docs, README, resume (max 3 ticks/week)</div></div></div>
+          <div class="priority-item"><div class="pri-badge">📋</div><div class="pri-meta"><div class="meta-title">Python</div><div class="meta-sub">Deep projects: scalable services, queues, caching</div></div></div>
+          <div class="priority-item"><div class="pri-badge">📋</div><div class="pri-meta"><div class="meta-title">DSA (c++) </div><div class="meta-sub">Focused problem solving: 200–250 quality problems</div></div></div>
+          <div class="priority-item"><div class="pri-badge">📋</div><div class="pri-meta"><div class="meta-title">CS Fundamentals </div><div class="meta-sub">OS/DBMS/Networks/System design basics</div></div></div>
+          <div class="priority-item"><div class="pri-badge">📋</div><div class="pri-meta"><div class="meta-title">Web-Development </div><div class="meta-sub">Projects/Backend/React</div></div></div>
+          <div class="priority-item"><div class="pri-badge">📋</div><div class="pri-meta"><div class="meta-title">Projects & GitHub & Resume  </div><div class="meta-sub">Polish docs, README, resume </div></div></div>
         </div>
 
-        <h3 style="margin-top:14px">Daily Tasks</h3>
+        <h3 style="margin-top:14px; font-size: 24px;" >Daily Tasks 🤑</h3>
         
         <div class="tasks" id="tasks"></div>
 
@@ -93,7 +126,6 @@
         <div class="stats" id="stats"></div>
         <h3 style="margin-top:12px">Recent History</h3>
         <div class="history" id="history"></div>
-        <footer>Progress stored in <strong>localStorage</strong>. Export to back up or restore on another device.</footer>
       </div>
     </div>
 
@@ -366,12 +398,11 @@ function getCloudGistId(){ return localStorage.getItem(CLOUD_GISTID_KEY) || null
 function setCloudGistId(id){ if(id) localStorage.setItem(CLOUD_GISTID_KEY, id); else localStorage.removeItem(CLOUD_GISTID_KEY); }
 function cloudEnabled(){ return !!getCloudToken(); }
 
-// --- UPDATED: Added timestamp to force fresh data ---
+// --- API Functions (CORS Fixed) ---
 async function findExistingGist(token) {
-  // Add timestamp to prevent caching of the Gist list
   const url = 'https://api.github.com/gists?cb=' + new Date().getTime();
-  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token, 'Cache-Control': 'no-cache' } });
-  if(!res.ok) return null;
+  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
+  if(!res.ok) throw new Error('Find failed: ' + res.status);
   const gists = await res.json();
   const found = gists.find(g => g.files && g.files[CLOUD_FILENAME]);
   return found ? found.id : null;
@@ -381,7 +412,7 @@ async function createGist(token, contentStr){
   const url = 'https://api.github.com/gists';
   const body = { description: CLOUD_DESCRIPTION, public: false, files: { [CLOUD_FILENAME]: { content: contentStr } } };
   const res = await fetch(url, { method: 'POST', headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if(!res.ok) throw new Error('Create gist failed');
+  if(!res.ok) throw new Error('Create failed: ' + res.status);
   return await res.json();
 }
 
@@ -389,15 +420,14 @@ async function updateGist(token, gistId, contentStr){
   const url = `https://api.github.com/gists/${gistId}`;
   const body = { files: { [CLOUD_FILENAME]: { content: contentStr } } };
   const res = await fetch(url, { method: 'PATCH', headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  if(!res.ok) throw new Error('Update gist failed');
+  if(!res.ok) throw new Error('Update failed: ' + res.status);
   return await res.json();
 }
 
-// --- UPDATED: Added timestamp to fetch to break cache ---
 async function fetchGistContent(token, gistId){
   const url = `https://api.github.com/gists/${gistId}?timestamp=${new Date().getTime()}`;
-  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token, 'Cache-Control': 'no-cache' } });
-  if(!res.ok) throw new Error('Fetch gist failed');
+  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
+  if(!res.ok) throw new Error('Fetch failed: ' + res.status);
   const data = await res.json();
   if(!data.files || !data.files[CLOUD_FILENAME]) throw new Error('Gist missing file');
   return data.files[CLOUD_FILENAME].content;
@@ -405,90 +435,94 @@ async function fetchGistContent(token, gistId){
 
 function debounce(fn, wait){ let t = null; return (...args)=>{ if(t) clearTimeout(t); t = setTimeout(()=>fn(...args), wait); }; }
 
+// --- Sync Logic with Status Updates ---
 let scheduledCloudSave = debounce(async () => {
-  if(!cloudEnabled()) { setSyncStatus('disabled'); return; }
+  if(!cloudEnabled()) { setSyncStatus('Offline', 'offline'); return; }
+  
+  setSyncStatus('Saving...', 'working'); // 🟡 Yellow
+  
   const token = getCloudToken();
   let gistId = getCloudGistId();
   const contentStr = JSON.stringify(STORE, null, 2);
+  
   try{
-    setSyncStatus('saving...');
     if(!gistId){
       gistId = await findExistingGist(token);
       if(gistId) setCloudGistId(gistId);
       else { const created = await createGist(token, contentStr); setCloudGistId(created.id); gistId = created.id; }
     }
     await updateGist(token, gistId, contentStr);
-    setSyncStatus('synced');
-  } catch(err){ console.error('Cloud save failed', err); setSyncStatus('error'); }
+    setSyncStatus('Cloud Synced', 'success'); // 🟢 Green
+  } catch(err){ 
+    console.error('Cloud save failed', err); 
+    setSyncStatus('Sync Error', 'error'); // 🔴 Red
+    showToast('❌ Sync Error. Check console.');
+  }
 }, 2000);
 
 async function loadFromCloudAndMerge(){
-  if(!cloudEnabled()) return;
+  if(!cloudEnabled()) { setSyncStatus('Offline', 'offline'); return; }
+  
+  setSyncStatus('Loading...', 'working'); // 🟡 Yellow
+  
   const token = getCloudToken();
   let gistId = getCloudGistId();
   
-  // Try to find ID if missing
-  if(!gistId) { 
-      try { gistId = await findExistingGist(token); if(gistId) setCloudGistId(gistId); } 
-      catch(e) { console.error(e); } 
-  }
-  if(!gistId) { setSyncStatus('no gist'); return; }
-
   try{
-    setSyncStatus('loading...');
-    const content = await fetchGistContent(token, gistId);
-    const parsed = JSON.parse(content);
-    
-    // IMPORTANT: Cloud is the source of truth. Merge intelligently.
-    STORE = mergeStores(STORE, parsed);
-    saveData(STORE);
-    renderAll();
-    setSyncStatus('synced');
+      if(!gistId) { 
+          gistId = await findExistingGist(token); 
+          if(gistId) setCloudGistId(gistId); 
+      }
+      if(!gistId) { setSyncStatus('No Data Found', 'error'); return; }
+
+      const content = await fetchGistContent(token, gistId);
+      const parsed = JSON.parse(content);
+      STORE = mergeStores(STORE, parsed);
+      saveData(STORE);
+      renderAll();
+      setSyncStatus('Cloud Synced', 'success'); // 🟢 Green
   } catch(err){ 
       console.error('Cloud load failed', err); 
-      setSyncStatus('error'); 
+      setSyncStatus('Connection Failed', 'error'); // 🔴 Red
   }
 }
 
+// --- New Visual Status UI ---
 function createSyncControls(){
   const header = document.querySelector('header');
-  const ctr = document.createElement('div');
-  ctr.style.marginTop = '15px'; ctr.style.display = 'flex'; ctr.style.gap = '8px'; ctr.style.justifyContent = 'center'; ctr.style.flexWrap = 'wrap';
   
-  const btnEnable = document.createElement('button');
-  btnEnable.className = 'btn btn-primary';
-  btnEnable.textContent = cloudEnabled() ? 'Cloud Sync: On' : 'Enable Cloud Sync';
-  btnEnable.onclick = async ()=>{
-    if(cloudEnabled()){ if(confirm('Disable sync?')) { setCloudToken(null); setCloudGistId(null); setSyncStatus('disabled'); btnEnable.textContent = 'Enable Cloud Sync'; } return; }
-    const token = prompt('Paste GitHub Token (gist permission):');
-    if(!token) return;
-    btnEnable.textContent = 'Connecting...';
-    setCloudToken(token.trim());
-    await loadFromCloudAndMerge();
-    btnEnable.textContent = 'Cloud Sync: On';
-  };
-
-  // NEW: Refresh Button
-  const btnRefresh = document.createElement('button');
-  btnRefresh.className = 'btn btn-secondary';
-  btnRefresh.textContent = '🔄 Sync Now';
-  btnRefresh.onclick = async () => {
-      if(!cloudEnabled()) return alert('Enable Cloud Sync first');
-      await loadFromCloudAndMerge();
-      showToast('Synced with Cloud');
-  };
-
-  const status = document.createElement('div');
-  status.id = 'cloudSyncStatus';
-  status.style.fontSize = '12px'; status.style.padding = '8px'; status.style.borderRadius = '6px'; status.style.background = '#eef2ff';
-  status.textContent = cloudEnabled() ? 'Cloud: Ready' : 'Cloud: Disabled';
+  // Container
+  const badge = document.createElement('div');
+  badge.className = 'status-badge';
+  badge.id = 'statusBadge';
   
-  ctr.appendChild(btnEnable); 
-  ctr.appendChild(btnRefresh); // Added refresh button
-  ctr.appendChild(status);
-  header.appendChild(ctr);
+  // Dot
+  const dot = document.createElement('div');
+  dot.className = 'status-dot';
+  
+  // Text
+  const text = document.createElement('span');
+  text.id = 'statusText';
+  text.textContent = 'Offline';
+  
+  badge.appendChild(dot);
+  badge.appendChild(text);
+  header.appendChild(badge);
+  
+  // Initial check
+  if(cloudEnabled()) setSyncStatus('Ready', 'offline');
 }
-function setSyncStatus(txt){ const el = document.getElementById('cloudSyncStatus'); if(el) el.textContent = 'Cloud: ' + txt; }
+
+function setSyncStatus(msg, type){
+  const badge = document.getElementById('statusBadge');
+  const text = document.getElementById('statusText');
+  if(badge && text){
+      text.textContent = msg;
+      // Reset classes
+      badge.className = 'status-badge';
+      if(type) badge.classList.add(type);
+  }
+}
 
 function ticksThisWeek(id){ const arr = STORE[id]||[]; const wk=weekKey(todayISO()); return arr.filter(d=>weekKey(d)===wk).length; }
 function canTickToday(id){ const arr = STORE[id]||[]; const last = arr.length?arr[arr.length-1]:null; if(last===todayISO()) return false; if(id==='github') return ticksThisWeek(id) < 3; return true; }
@@ -565,7 +599,6 @@ if(params.has('token')){
         setCloudToken(t);
         window.history.replaceState({}, document.title, window.location.pathname);
         showToast('Auto-login successful! 🔓');
-        // FORCE LOAD on login
         loadFromCloudAndMerge();
     }
 }
