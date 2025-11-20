@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>50 LPA Roadmap — Priority Tracker</title>
+  <style>
+    :root{--primary:#4f46e5;--accent:#10b981;--bg:#f4f6fc;--card:#fff}
+    *{box-sizing:border-box}
+    body{font-family:Inter, system-ui, Arial, sans-serif;background:var(--bg);color:#0f172a;margin:0}
+    header{background:linear-gradient(90deg,var(--primary),#7c3aed);color:white;padding:28px 20px;text-align:center}
+    .container{max-width:980px;margin:20px auto;padding:16px}
+    .grid{display:grid;grid-template-columns:1fr 340px;gap:20px}
+    .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 8px 20px rgba(16,24,40,0.06)}
+    h1{margin:0 0 6px;font-size:20px}
+    p.lead{margin:0;color:#334155}
+    .priority{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+    .priority-item{display:flex;gap:12px;align-items:center;padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04)}
+    .pri-badge{width:48px;height:48px;border-radius:10px;background:linear-gradient(180deg,#fff,#f8fafc);display:flex;align-items:center;justify-content:center;font-weight:700}
+    .pri-meta{flex:1}
+    .meta-title{font-weight:700}
+    .meta-sub{font-size:13px;color:#475569}
+
+    /* tasks */
+    .tasks{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+    .task{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04)}
+
+    /* Bigger, vivid tick box */
+    .tick-btn{background:transparent;border:none;padding:0;cursor:pointer;width:72px;height:72px;border-radius:14px;display:flex;align-items:center;justify-content:center;transition:transform .12s}
+    .tick-btn:active{transform:scale(.97)}
+    .tick-box{width:64px;height:64px;border-radius:12px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:0 10px 26px rgba(16,24,40,0.08);display:flex;align-items:center;justify-content:center;border:2px solid rgba(15,23,42,0.04)}
+    .tick-box.done{background:linear-gradient(180deg,#ecfdf5,#bbf7d0);border-color:rgba(16,185,129,0.25)}
+    svg.check{width:36px;height:36px;opacity:0;transform:scale(.8);transition:all .22s cubic-bezier(.2,.9,.3,1)}
+    svg.check.visible{opacity:1;transform:scale(1)}
+
+    .stats{display:flex;flex-direction:column;gap:8px}
+    .stat{display:flex;justify-content:space-between;font-size:14px}
+    .history{margin-top:12px;max-height:220px;overflow:auto;padding-right:6px}
+    .history-item{font-size:13px;padding:8px;border-radius:8px;background:linear-gradient(90deg,#fbfbff,#ffffff);margin-bottom:6px;border:1px solid rgba(99,102,241,0.06)}
+
+    .controls{display:flex;gap:8px;margin-top:12px}
+    button.btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer}
+    .btn-primary{background:var(--primary);color:white}
+    .btn-secondary{background:#eef2ff;color:var(--primary)}
+
+    /* tiny toast */
+    .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#111827;color:white;padding:10px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .2s}
+    .toast.show{opacity:1;pointer-events:auto}
+
+    /* modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .18s}
+    .modal-backdrop.open{opacity:1;pointer-events:auto}
+    .modal{background:white;padding:18px;border-radius:12px;max-width:420px;width:92%;box-shadow:0 12px 40px rgba(2,6,23,0.4)}
+    .modal h3{margin:0 0 8px}
+    .modal p{margin:0 0 12px;color:#475569}
+    .modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
+    footer{margin-top:18px;text-align:center;color:#475569;font-size:13px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚀 Priority Roadmap — Tracker</h1>
+    <p style="margin:6px 0 0;opacity:.95">Follow the high-impact 3-hour plan: backend & system design, DSA, CS fundamentals, and GitHub/resume.</p>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <div class="card">
+        <h2>Priority System (Most → Least)</h2>
+        <div class="priority">
+          <div class="priority-item"><div class="pri-badge">1</div><div class="pri-meta"><div class="meta-title">Backend + System Design — 60 min</div><div class="meta-sub">Deep projects: scalable services, queues, caching</div></div></div>
+          <div class="priority-item"><div class="pri-badge">2</div><div class="pri-meta"><div class="meta-title">DSA (c++) — 60 min</div><div class="meta-sub">Focused problem solving: 200–250 quality problems</div></div></div>
+          <div class="priority-item"><div class="pri-badge">3</div><div class="pri-meta"><div class="meta-title">CS Fundamentals — 30 min</div><div class="meta-sub">OS/DBMS/Networks/System design basics</div></div></div>
+          <div class="priority-item"><div class="pri-badge">4</div><div class="pri-meta"><div class="meta-title">GitHub & Resume — 30 min (3 days/week)</div><div class="meta-sub">Polish docs, README, resume (max 3 ticks/week)</div></div></div>
+        </div>
+
+        <h3 style="margin-top:14px">Daily Tasks</h3>
+        
+        <div class="tasks" id="tasks"></div>
+
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button class="btn btn-primary" id="export">Export Progress</button>
+          <button class="btn btn-secondary" id="import">Import Progress</button>
+          <input type="file" id="fileInput" accept="application/json" style="display:none" />
+        </div>
+
+      </div>
+
+      <div class="card">
+        <h2>Quick Stats</h2>
+        <div class="stats" id="stats"></div>
+        <h3 style="margin-top:12px">Recent History</h3>
+        <div class="history" id="history"></div>
+        <footer>Progress stored in <strong>localStorage</strong>. Export to back up or restore on another device.</footer>
+      </div>
+    </div>
+
+    <div style="margin-top:18px" class="card">
+      <h2>PROJECTS AND SKILLS NEED TO BE DONE </h2>
+      <style>
+    .roadmap-container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 25px;
+        border-radius: 15px;
+        background: #f7f7f7;
+        font-family: Arial, Helvetica, sans-serif;
+        line-height: 1.7;
+        color: #222;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .roadmap-container h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .phase-title {
+        font-size: 22px;
+        font-weight: bold;
+        margin-top: 30px;
+        color: #2e59d9;
+    }
+
+    .sub-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 15px;
+        color: #444;
+    }
+
+    .roadmap-container p {
+        margin: 10px 0;
+    }
+
+    .highlight {
+        background: #eaf1ff;
+        padding: 5px 10px;
+        border-radius: 6px;
+        display: inline-block;
+        margin-top: 8px;
+    }
+</style>
+
+<div class="roadmap-container">
+
+    <h2>🚀 Full 2-Year Backend + DSA Roadmap (Readable & Beautiful Format)</h2>
+
+    <div class="phase-title">📌 Phase 1 (Month 1–3): Foundations + DSA Start</div>
+
+    <p>
+        <span class="highlight">Goal:</span> Build basic backend skills using Node, Express, and Mongo/Postgres, learn Python basics, start your DSA habit, and prepare yourself for advanced system-level projects.
+    </p>
+
+    <div class="sub-title">🔹 Step 1: Setup (Week 1)</div>
+    <p>
+        Install VS Code, Node.js, Python, and Git. Create your GitHub account and learn basic Git commands: commit, push, pull, and branch. Make one repo called <b>learning-log</b> and push 2–3 times every week.
+    </p>
+
+    <div class="sub-title">🔹 Step 2: Backend Basics (Weeks 1–6)</div>
+    <p>
+        Learn JavaScript fundamentals including variables, functions, arrays, objects, async/await, and promises.  
+        Move to Node + Express: create a simple server, build GET/POST/PUT/DELETE routes, add middleware, error handling, and integrate MongoDB/Postgres with schemas and CRUD operations.  
+        Build mini-projects like a <b>Notes API</b> and an <b>Auth API</b> with JWT and push everything to GitHub.
+    </p>
+
+    <div class="sub-title">🔹 Step 3: Python + DSA Basics (Weeks 1–8)</div>
+    <p>
+        Learn Python basics for the first 2–3 weeks: input/output, loops, if/else, lists, dictionaries, sets, tuples, functions, and comprehensions.  
+        Then switch to DSA and solve ~50 easy problems (arrays, strings, hashmaps) using LeetCode/NeetCode. Target 1 problem per study day.
+    </p>
+
+    <div class="sub-title">🔹 Step 4: CS Fundamentals Starter (Weeks 4–12)</div>
+    <p>
+        In your daily 30-minute CS slot:  
+        Mon → OS basics  
+        Tue → DBMS basics  
+        Wed → Networks basics  
+        Thu → OOP concepts  
+        Fri → Notes, recap, and GitHub cleanup  
+        Weekends → optional revision.  
+        This stage builds familiarity, not depth.
+    </p>
+
+
+    <div class="phase-title">📌 Phase 2 (Month 4–9): Golden Project 1 + Real DSA</div>
+
+    <p>
+        <span class="highlight">Goal:</span> Build Golden Project 1 (a real system-level backend), reach 120–150 DSA problems, and improve CS fundamentals.
+    </p>
+
+    <div class="sub-title">🥇 Golden Project 1: Food Ordering & Tracking System</div>
+
+    <p>
+        Design the system (Week 1): define entities like User, Restaurant, MenuItem, Cart, Order, DeliveryPartner, and flows such as browsing, adding to cart, placing orders, restaurant acceptance, and delivery updates. Define all REST APIs and a clean DB schema.
+    </p>
+
+    <p>
+        Build core backend (Weeks 2–4): JWT auth, restaurant CRUD, menu system, cart API, and order creation. Use a clean folder structure (controllers, routes, models) and apply error handling and validation.
+    </p>
+
+    <p>
+        Add role system + order tracking (Weeks 5–7):  
+        Roles → User, RestaurantOwner, DeliveryPartner  
+        APIs → accept/reject order, update delivery status, view live status  
+        Testing can be done via Postman or a simple React UI.
+    </p>
+
+    <p>
+        Add performance layer (Weeks 8–10): integrate Redis caching for restaurant list and menus, add pagination, log response times, and document “before vs after caching” improvements for your resume.
+    </p>
+
+    <p>
+        Deployment (Weeks 11–12): deploy on Render/Railway. Optional simple React UI for restaurants, menu, cart, and order status. Add a professional README with architecture, endpoints, setup, and optimizations.
+    </p>
+
+    <div class="sub-title">🧠 DSA Target: 50 → 150 problems</div>
+    <p>
+        Add 50–60 problems on two pointers, sliding window, linked lists, stacks, queues, then another 40–50 on binary search, recursion, backtracking, and trees.  
+        Focus on solving <b>1 problem/day</b> and write clean Python code.
+    </p>
+
+    <div class="sub-title">🎓 CS Fundamentals Upgrade</div>
+    <p>
+        Learn deeper OS topics like scheduling and deadlocks, DBMS concepts like indexing and transactions, and Networks topics like TCP 3-way handshake and HTTPS. Maintain short, reusable notes.
+    </p>
+
+
+    <div class="phase-title">📌 Phase 3 (Month 10–15): Golden Project 2 + Strong DSA</div>
+
+    <p>
+        <span class="highlight">Goal:</span> Build Golden Project 2 (a distributed system), finish 200–220 DSA problems, and learn practical system design.
+    </p>
+
+    <div class="sub-title">🥇 Golden Project 2: Task Queue & Scheduler Service</div>
+
+    <p>
+        Design the system (Week 1): the system will take job requests (email, reports), store them in DB, process jobs via a worker, retry failures, and send failed ones to a dead-letter queue. Add a metrics or dashboard endpoint.
+    </p>
+
+    <p>
+        Build core APIs (Weeks 2–4): create POST /jobs and GET /jobs/:id, define job schema (id, type, payload, status, retries, timestamps).
+    </p>
+
+    <p>
+        Build worker + retry logic (Weeks 5–7): worker will poll pending jobs, execute them, update status, and implement exponential backoff retry logic.
+    </p>
+
+    <p>
+        Add dead-letter queue + metrics (Weeks 8–10): move failed jobs after max retries, add metrics like total processed, failed, and average latency.
+    </p>
+
+    <p>
+        Dashboard + Docs (Weeks 11–12): optional React dashboard, plus a detailed README covering design choices, failure handling, scaling ideas, and architecture.
+    </p>
+
+    <div class="sub-title">🧠 DSA Target: 200–220 problems</div>
+    <p>
+        Complete topics like medium trees, graphs, BFS/DFS, basic DP, heaps, and priority queues.
+    </p>
+
+    <div class="sub-title">📚 System Design Basics</div>
+    <p>
+        Study caching, load balancing, replication, sharding, and apply these concepts to your own projects by writing how you would scale each system.
+    </p>
+
+
+    <div class="phase-title">📌 Phase 4 (Month 16–24): Polish, Resume, Open Source, Jobs</div>
+
+    <p>
+        <span class="highlight">Goal:</span> Become job-ready, finalize your profile, revise deeply, and apply smartly.
+    </p>
+
+    <p>
+        Build a polished one-page resume with your two golden projects, metrics, skills, tools, and DSA count.  
+        Clean your GitHub by pinning top repos with strong READMEs.  
+        Optionally do 2–3 open-source contributions or create a small npm/Python utility.  
+        Prepare for interviews by revising both projects deeply, re-solving DSA patterns, and reviewing CS notes.
+    </p>
+
+    <p>
+        Start applying to product companies like CRED, PhonePe, Razorpay, and backend-focused startups. Eventually apply to international remote roles once confident.
+    </p>
+
+    <div class="sub-title">✔ Final Checklist</div>
+    <p>
+        Learn backend → learn Python → solve 200+ DSA → build Golden Project 1 → build Golden Project 2 → learn CS fundamentals → polish resume & GitHub → apply smartly.
+    </p>
+
+</div>
+
+  </div>
+
+  <div class="toast" id="toast">Marked as done for today ✅</div>
+
+  <!-- Modal -->
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" style="display:none">
+    <div class="modal" id="modal">
+      <h3 id="modalTitle">Confirm</h3>
+      <p id="modalMessage">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn" id="modalCancel">No</button>
+        <button class="btn btn-primary" id="modalConfirm">Yes</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const TASKS = [
+  { id: 'backend', title: 'Backend + System Design', desc: 'Deep projects: scalable services, queues, caching' },
+  { id: 'dsa_problems', title: 'DSA (C++) — Problems', desc: 'Focused problem solving: 200–250 quality problems' },
+  { id: 'dsa_learning', title: 'DSA — Theory', desc: 'Theory learning and understanding the concepts' },
+  { id: 'cs', title: 'CS Fundamentals', desc: 'OS/DBMS/Networks/System design basics' },
+  { id: 'python_learning', title: 'Python — Learning', desc: 'Core syntax, stdlib, OOP, idiomatic Python' },
+  { id: 'python_projects', title: 'Python — Projects', desc: 'Build mini-projects: scripts, automation, small apps' },
+  { id: 'webdev_project', title: 'Web Dev — Project', desc: 'Build a full-stack project: deploy, README, tests' },
+  { id: 'github', title: 'GitHub & Resume', desc: 'Polish docs, README, resume' },
+  { id: 'wedev', title: 'Web Development (Learning)', desc: 'Learning about the concepts' }
+];
+
+const STORAGE_KEY = 'priority_roadmap_v1';
+const BACKUP_KEY  = 'priority_roadmap_v1_backup';
+const CLOUD_TOKEN_KEY = 'priority_roadmap_gist_token';
+const CLOUD_GISTID_KEY = 'priority_roadmap_gist_id';
+const CLOUD_FILENAME = 'priority_roadmap.json';
+const CLOUD_DESCRIPTION = 'Priority Roadmap — auto-sync backup (private)';
+
+// --- FIXED DATE FUNCTION ---
+function todayISO(){ 
+  const d = new Date();
+  const offsetDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
+  return offsetDate.toISOString().slice(0, 10);
+}
+
+function weekKey(dateISO){ const d=new Date(dateISO+'T00:00:00'); const day=(d.getDay()+6)%7; const monday=new Date(d); monday.setDate(d.getDate()-day); monday.setHours(0,0,0,0); return monday.toISOString().slice(0,10); }
+
+function ensureStoreShape(store){
+  const out = Object.assign({}, store);
+  TASKS.forEach(t => { if (!Array.isArray(out[t.id])) out[t.id] = []; });
+  return out;
+}
+
+function mergeStores(base,incoming){
+  const out = Object.assign({}, base);
+  incoming = ensureStoreShape(incoming);
+  TASKS.forEach(t=>{
+    const a = Array.isArray(out[t.id]) ? out[t.id].slice() : [];
+    const b = Array.isArray(incoming[t.id]) ? incoming[t.id].slice() : [];
+    const set = new Set([...(a||[]), ...(b||[])]);
+    out[t.id] = Array.from(set).sort((x,y)=>x.localeCompare(y));
+  });
+  return out;
+}
+
+function saveData(d){
+  try {
+    const str = JSON.stringify(d);
+    localStorage.setItem(STORAGE_KEY, str);
+    localStorage.setItem(BACKUP_KEY, str);
+  } catch(e){ console.error('saveData error', e); }
+}
+
+function loadData(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw){
+    const bak = localStorage.getItem(BACKUP_KEY);
+    if(bak){ try{ return ensureStoreShape(JSON.parse(bak)); }catch(e){} }
+    const obj={}; TASKS.forEach(t=>obj[t.id]=[]); return obj;
+  }
+  try{ const parsed = JSON.parse(raw); return ensureStoreShape(parsed); } catch(e){
+    const bak = localStorage.getItem(BACKUP_KEY);
+    if(bak){ try{ return ensureStoreShape(JSON.parse(bak)); }catch(be){} }
+    const obj={}; TASKS.forEach(t=>obj[t.id]=[]); return obj;
+  }
+}
+
+let STORE = loadData();
+
+// Cloud Utils
+function getCloudToken(){ return localStorage.getItem(CLOUD_TOKEN_KEY) || null; }
+function setCloudToken(token){ if(token) localStorage.setItem(CLOUD_TOKEN_KEY, token); else localStorage.removeItem(CLOUD_TOKEN_KEY); }
+function getCloudGistId(){ return localStorage.getItem(CLOUD_GISTID_KEY) || null; }
+function setCloudGistId(id){ if(id) localStorage.setItem(CLOUD_GISTID_KEY, id); else localStorage.removeItem(CLOUD_GISTID_KEY); }
+function cloudEnabled(){ return !!getCloudToken(); }
+
+// --- UPDATED: Find existing gist before creating ---
+async function findExistingGist(token) {
+  const url = 'https://api.github.com/gists';
+  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
+  if(!res.ok) return null;
+  const gists = await res.json();
+  // Look for a gist containing our specific filename
+  const found = gists.find(g => g.files && g.files[CLOUD_FILENAME]);
+  return found ? found.id : null;
+}
+
+async function createGist(token, contentStr){
+  const url = 'https://api.github.com/gists';
+  const body = { description: CLOUD_DESCRIPTION, public: false, files: { [CLOUD_FILENAME]: { content: contentStr } } };
+  const res = await fetch(url, { method: 'POST', headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if(!res.ok) throw new Error('Create gist failed');
+  return await res.json();
+}
+
+async function updateGist(token, gistId, contentStr){
+  const url = `https://api.github.com/gists/${gistId}`;
+  const body = { files: { [CLOUD_FILENAME]: { content: contentStr } } };
+  const res = await fetch(url, { method: 'PATCH', headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if(!res.ok) throw new Error('Update gist failed');
+  return await res.json();
+}
+
+async function fetchGistContent(token, gistId){
+  const url = `https://api.github.com/gists/${gistId}`;
+  const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
+  if(!res.ok) throw new Error('Fetch gist failed');
+  const data = await res.json();
+  if(!data.files || !data.files[CLOUD_FILENAME]) throw new Error('Gist missing file');
+  return data.files[CLOUD_FILENAME].content;
+}
+
+function debounce(fn, wait){
+  let t = null;
+  return (...args)=>{ if(t) clearTimeout(t); t = setTimeout(()=>fn(...args), wait); };
+}
+
+let scheduledCloudSave = debounce(async () => {
+  if(!cloudEnabled()) { setSyncStatus('disabled'); return; }
+  const token = getCloudToken();
+  let gistId = getCloudGistId();
+  const contentStr = JSON.stringify(STORE, null, 2);
+  
+  try{
+    setSyncStatus('saving...');
+    // If we have token but no ID, try to find or create
+    if(!gistId){
+      gistId = await findExistingGist(token);
+      if(gistId){
+         setCloudGistId(gistId);
+      } else {
+         const created = await createGist(token, contentStr);
+         setCloudGistId(created.id);
+         gistId = created.id;
+      }
+    }
+    
+    await updateGist(token, gistId, contentStr);
+    setSyncStatus('synced');
+  } catch(err){
+    console.error('Cloud save failed', err);
+    setSyncStatus('error');
+  }
+}, 2000); // Increased to 2s to be safer with rate limits
+
+async function loadFromCloudAndMerge(){
+  if(!cloudEnabled()) return;
+  const token = getCloudToken();
+  let gistId = getCloudGistId();
+  
+  // Auto-discovery if ID missing
+  if(!gistId) {
+      try {
+        gistId = await findExistingGist(token);
+        if(gistId) setCloudGistId(gistId);
+      } catch(e) { console.error(e); }
+  }
+
+  if(!gistId) { setSyncStatus('no gist'); return; }
+  
+  try{
+    setSyncStatus('loading...');
+    const content = await fetchGistContent(token, gistId);
+    const parsed = JSON.parse(content);
+    STORE = mergeStores(STORE, ensureStoreShape(parsed));
+    saveData(STORE);
+    renderAll();
+    setSyncStatus('synced');
+  } catch(err){
+    console.error('Cloud load failed', err);
+    setSyncStatus('error');
+  }
+}
+
+// UI Components
+function createSyncControls(){
+  const header = document.querySelector('header');
+  const ctr = document.createElement('div');
+  ctr.style.marginTop = '15px';
+  ctr.style.display = 'flex';
+  ctr.style.gap = '8px';
+  ctr.style.justifyContent = 'center';
+  ctr.style.flexWrap = 'wrap';
+
+  const btnEnable = document.createElement('button');
+  btnEnable.className = 'btn btn-primary';
+  btnEnable.textContent = cloudEnabled() ? 'Cloud Sync: On' : 'Enable Cloud Sync';
+  
+  btnEnable.onclick = async ()=>{
+    if(cloudEnabled()){
+      if(confirm('Disable cloud sync on this device?')) {
+        setCloudToken(null); setCloudGistId(null); setSyncStatus('disabled'); btnEnable.textContent = 'Enable Cloud Sync';
+      }
+      return;
+    }
+    const token = prompt('Paste GitHub Token (gist permission):');
+    if(!token) return;
+    
+    btnEnable.textContent = 'Connecting...';
+    setCloudToken(token.trim());
+    
+    // Try to find existing gist first
+    try {
+        const existingId = await findExistingGist(token.trim());
+        if(existingId) {
+            setCloudGistId(existingId);
+            await loadFromCloudAndMerge(); // Pull down existing data
+            alert('Found existing roadmap Gist! Synced successfully.');
+        } else {
+            // Create new
+            const created = await createGist(token.trim(), JSON.stringify(STORE, null, 2));
+            setCloudGistId(created.id);
+            alert('Created new Gist storage.');
+        }
+        setSyncStatus('synced');
+        btnEnable.textContent = 'Cloud Sync: On';
+    } catch(e) {
+        alert('Connection failed. Check console.');
+        console.error(e);
+        setCloudToken(null);
+        btnEnable.textContent = 'Enable Cloud Sync';
+    }
+  };
+
+  const btnForce = document.createElement('button');
+  btnForce.className = 'btn btn-secondary';
+  btnForce.textContent = 'Force Sync';
+  btnForce.onclick = async ()=>{
+    if(!cloudEnabled()) return alert('Not enabled');
+    await loadFromCloudAndMerge();
+    await scheduledCloudSave();
+  };
+
+  const status = document.createElement('div');
+  status.id = 'cloudSyncStatus';
+  status.style.fontSize = '12px';
+  status.style.padding = '8px';
+  status.style.borderRadius = '6px';
+  status.style.background = '#eef2ff';
+  status.textContent = cloudEnabled() ? 'Cloud: Ready' : 'Cloud: Disabled';
+
+  ctr.appendChild(btnEnable);
+  ctr.appendChild(btnForce);
+  ctr.appendChild(status);
+  header.appendChild(ctr);
+}
+
+function setSyncStatus(txt){
+  const el = document.getElementById('cloudSyncStatus');
+  if(el) el.textContent = 'Cloud: ' + txt;
+}
+
+// App Logic
+function ticksThisWeek(id){ const arr = STORE[id]||[]; const wk=weekKey(todayISO()); return arr.filter(d=>weekKey(d)===wk).length; }
+function canTickToday(id){ const arr = STORE[id]||[]; const last = arr.length?arr[arr.length-1]:null; if(last===todayISO()) return false; if(id==='github') return ticksThisWeek(id) < 3; return true; }
+
+// Modal & Tick
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalTitle = document.getElementById('modalTitle');
+const modalMessage = document.getElementById('modalMessage');
+const modalConfirm = document.getElementById('modalConfirm');
+const modalCancel = document.getElementById('modalCancel');
+let pendingAction = null;
+function openModal(title,message,action){ pendingAction = action; modalTitle.textContent = title; modalMessage.textContent = message; modalBackdrop.style.display='flex'; setTimeout(()=>modalBackdrop.classList.add('open'),10); modalConfirm.focus(); }
+function closeModal(){ modalBackdrop.classList.remove('open'); setTimeout(()=>{ modalBackdrop.style.display='none'; pendingAction=null; },180); }
+modalCancel?.addEventListener('click', closeModal);
+modalBackdrop?.addEventListener('click', (e)=>{ if(e.target===modalBackdrop) closeModal(); });
+modalConfirm?.addEventListener('click', ()=>{ if(!pendingAction) return closeModal(); const {type,id} = pendingAction; if(type==='tick') performTick(id); else if(type==='undo') performUndo(id); closeModal(); });
+
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+
+function performTick(id){
+  STORE[id] = STORE[id] || [];
+  STORE[id].push(todayISO());
+  STORE = mergeStores(STORE, {});
+  saveData(STORE);
+  renderAll();
+  showToast('Marked as done for today ✅');
+  if(cloudEnabled()) scheduledCloudSave();
+}
+
+function performUndo(id){
+  const arr = STORE[id] || [];
+  if(!arr.length || arr[arr.length-1] !== todayISO()) return;
+  arr.pop();
+  STORE[id] = arr;
+  saveData(STORE);
+  renderAll();
+  showToast('Undo successful');
+  if(cloudEnabled()) scheduledCloudSave();
+}
+
+function onTickClick(id){
+  const arr = STORE[id] || []; const last = arr.length?arr[arr.length-1]:null;
+  if(last === todayISO()){ openModal('Undo tick?','Undo today\'s tick?',{type:'undo',id}); return; }
+  if(id==='github' && ticksThisWeek(id) >= 3){ openModal('Limit reached','GitHub task already has 3 ticks this week.', {type:'noop'}); return; }
+  openModal('Confirm tick','Mark as done?',{type:'tick',id});
+}
+
+function svgCheck(visible){
+  return `<svg class='check ${visible ? "visible":""}' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M20 6L9 17l-5-5' /></svg>`;
+}
+
+function renderAll(){
+  STORE = ensureStoreShape(STORE);
+  const tasksEl = document.getElementById('tasks');
+  tasksEl.innerHTML = '';
+  TASKS.forEach(t=>{
+    const arr = STORE[t.id] || [];
+    const last = arr.length?arr[arr.length-1]:null;
+    const isDoneToday = last === todayISO();
+    const btnEnabled = canTickToday(t.id) || isDoneToday;
+    const div = document.createElement('div'); div.className='task';
+    div.innerHTML = `
+      <div style='display:flex;gap:12px;align-items:center'>
+        <div style='width:4px;height:48px;background:${isDoneToday?'var(--primary)':'#cbd5e1'};border-radius:4px'></div>
+        <div>
+          <div style='font-weight:700'>${t.title}</div>
+          <div class='meta-sub'>${t.desc}</div>
+        </div>
+      </div>
+      <div style='display:flex;align-items:center;gap:12px'>
+        <div style='text-align:right;font-size:12px;color:#94a3b8'>
+            <div>Total: <strong style="color:#475569">${arr.length}</strong></div>
+        </div>
+        <button class='tick-btn' data-id='${t.id}' ${btnEnabled ? '' : 'disabled'}>
+          <div class='tick-box ${isDoneToday ? 'done' : ''}'>${svgCheck(isDoneToday)}</div>
+        </button>
+      </div>
+    `;
+    tasksEl.appendChild(div);
+  });
+
+  document.getElementById('stats').innerHTML = TASKS.map(t=> `<div class='stat'><div>${t.title.split('—')[0]}</div><div><strong>${(STORE[t.id]||[]).length}</strong></div></div>`).join('');
+  
+  const flat = Object.entries(STORE).flatMap(([id,arr]) => (arr||[]).map(d=>({id,date:d}))).sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('history').innerHTML = flat.slice(0,50).map(it=> `<div class='history-item'><span>${it.date}</span><span>${TASKS.find(t=>t.id===it.id)?.title||it.id}</span></div>`).join('');
+
+  document.querySelectorAll('.tick-btn').forEach(btn=>{ btn.onclick = ()=>onTickClick(btn.dataset.id) });
+}
+
+// Export/Import
+document.getElementById('export').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(STORE, null, 2)], {type: 'application/json'}));
+  a.download = 'priority_roadmap.json'; a.click();
+};
+document.getElementById('import').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange = (e) => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = (ev) => { try{ STORE = mergeStores(STORE, JSON.parse(ev.target.result)); saveData(STORE); renderAll(); if(cloudEnabled()) scheduledCloudSave(); }catch(e){alert('Invalid JSON');} };
+  r.readAsText(f);
+};
+
+// Init
+createSyncControls();
+renderAll();
+if(cloudEnabled()) loadFromCloudAndMerge();
+
+</script>
+</body>
