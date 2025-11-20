@@ -341,6 +341,8 @@
   </div>
 
 <script>
+/* CONFIGURATION & DATA 
+*/
 const TASKS = [
   { id: 'backend', title: 'Backend + System Design', desc: 'Deep projects: scalable services, queues, caching' },
   { id: 'dsa_problems', title: 'DSA (C++) — Problems', desc: 'Focused problem solving: 200–250 quality problems' },
@@ -359,6 +361,8 @@ const CLOUD_GISTID_KEY = 'priority_roadmap_gist_id';
 const CLOUD_FILENAME = 'priority_roadmap.json';
 const CLOUD_DESCRIPTION = 'Priority Roadmap — auto-sync backup (private)';
 
+/* DATE UTILS 
+*/
 function todayISO(){ 
   const d = new Date();
   const offsetDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
@@ -366,11 +370,14 @@ function todayISO(){
 }
 function weekKey(dateISO){ const d=new Date(dateISO+'T00:00:00'); const day=(d.getDay()+6)%7; const monday=new Date(d); monday.setDate(d.getDate()-day); monday.setHours(0,0,0,0); return monday.toISOString().slice(0,10); }
 
+/* DATA MANAGEMENT 
+*/
 function ensureStoreShape(store){
   const out = Object.assign({}, store);
   TASKS.forEach(t => { if (!Array.isArray(out[t.id])) out[t.id] = []; });
   return out;
 }
+// Only used for internal logic, not for cloud loading anymore
 function mergeStores(base,incoming){
   const out = Object.assign({}, base);
   incoming = ensureStoreShape(incoming);
@@ -391,14 +398,14 @@ function loadData(){
 
 let STORE = loadData();
 
-// Cloud Utils
+/* CLOUD SYNC (API) 
+*/
 function getCloudToken(){ return localStorage.getItem(CLOUD_TOKEN_KEY) || null; }
 function setCloudToken(token){ if(token) localStorage.setItem(CLOUD_TOKEN_KEY, token); else localStorage.removeItem(CLOUD_TOKEN_KEY); }
 function getCloudGistId(){ return localStorage.getItem(CLOUD_GISTID_KEY) || null; }
 function setCloudGistId(id){ if(id) localStorage.setItem(CLOUD_GISTID_KEY, id); else localStorage.removeItem(CLOUD_GISTID_KEY); }
 function cloudEnabled(){ return !!getCloudToken(); }
 
-// --- API Functions (CORS Fixed) ---
 async function findExistingGist(token) {
   const url = 'https://api.github.com/gists?cb=' + new Date().getTime();
   const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
@@ -435,11 +442,12 @@ async function fetchGistContent(token, gistId){
 
 function debounce(fn, wait){ let t = null; return (...args)=>{ if(t) clearTimeout(t); t = setTimeout(()=>fn(...args), wait); }; }
 
-// --- Sync Logic with Status Updates ---
+/* SYNC LOGIC 
+*/
 let scheduledCloudSave = debounce(async () => {
   if(!cloudEnabled()) { setSyncStatus('Offline', 'offline'); return; }
   
-  setSyncStatus('Saving...', 'working'); // 🟡 Yellow
+  setSyncStatus('Saving...', 'working');
   
   const token = getCloudToken();
   let gistId = getCloudGistId();
@@ -452,18 +460,17 @@ let scheduledCloudSave = debounce(async () => {
       else { const created = await createGist(token, contentStr); setCloudGistId(created.id); gistId = created.id; }
     }
     await updateGist(token, gistId, contentStr);
-    setSyncStatus('Cloud Synced', 'success'); // 🟢 Green
+    setSyncStatus('Cloud Synced', 'success');
   } catch(err){ 
     console.error('Cloud save failed', err); 
-    setSyncStatus('Sync Error', 'error'); // 🔴 Red
-    showToast('❌ Sync Error. Check console.');
+    setSyncStatus('Sync Error', 'error'); 
   }
 }, 2000);
 
 async function loadFromCloudAndMerge(){
   if(!cloudEnabled()) { setSyncStatus('Offline', 'offline'); return; }
   
-  setSyncStatus('Loading...', 'working'); // 🟡 Yellow
+  setSyncStatus('Loading...', 'working');
   
   const token = getCloudToken();
   let gistId = getCloudGistId();
@@ -477,39 +484,36 @@ async function loadFromCloudAndMerge(){
 
       const content = await fetchGistContent(token, gistId);
       const parsed = JSON.parse(content);
-      STORE = mergeStores(STORE, parsed);
+      
+      // --- 🔥 THE FIX IS HERE 🔥 ---
+      // Instead of merging, we overwrite local with cloud.
+      // This ensures deletions (unticks) are respected.
+      STORE = ensureStoreShape(parsed);
+      
       saveData(STORE);
       renderAll();
-      setSyncStatus('Cloud Synced', 'success'); // 🟢 Green
+      setSyncStatus('Cloud Synced', 'success');
   } catch(err){ 
       console.error('Cloud load failed', err); 
-      setSyncStatus('Connection Failed', 'error'); // 🔴 Red
+      setSyncStatus('Connection Failed', 'error'); 
   }
 }
 
-// --- New Visual Status UI ---
+/* UI COMPONENTS 
+*/
 function createSyncControls(){
   const header = document.querySelector('header');
-  
-  // Container
   const badge = document.createElement('div');
   badge.className = 'status-badge';
   badge.id = 'statusBadge';
-  
-  // Dot
   const dot = document.createElement('div');
   dot.className = 'status-dot';
-  
-  // Text
   const text = document.createElement('span');
   text.id = 'statusText';
   text.textContent = 'Offline';
-  
   badge.appendChild(dot);
   badge.appendChild(text);
   header.appendChild(badge);
-  
-  // Initial check
   if(cloudEnabled()) setSyncStatus('Ready', 'offline');
 }
 
@@ -518,7 +522,6 @@ function setSyncStatus(msg, type){
   const text = document.getElementById('statusText');
   if(badge && text){
       text.textContent = msg;
-      // Reset classes
       badge.className = 'status-badge';
       if(type) badge.classList.add(type);
   }
@@ -542,7 +545,8 @@ modalConfirm?.addEventListener('click', ()=>{ if(!pendingAction) return closeMod
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 
 function performTick(id){
-  STORE[id] = STORE[id] || []; STORE[id].push(todayISO()); STORE = mergeStores(STORE, {});
+  STORE[id] = STORE[id] || []; STORE[id].push(todayISO()); 
+  // removed merge here, just simple assignment
   saveData(STORE); renderAll(); showToast('Marked as done for today ✅'); if(cloudEnabled()) scheduledCloudSave();
 }
 function performUndo(id){
@@ -591,7 +595,7 @@ document.getElementById('export').onclick = () => { const a = document.createEle
 document.getElementById('import').onclick = () => document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange = (e) => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { try{ STORE = mergeStores(STORE, JSON.parse(ev.target.result)); saveData(STORE); renderAll(); if(cloudEnabled()) scheduledCloudSave(); }catch(e){alert('Invalid JSON');} }; r.readAsText(f); };
 
-// --- 🚀 MAGIC LINK LOGIC ---
+// --- LOGIN LOGIC ---
 const params = new URLSearchParams(window.location.search);
 if(params.has('token')){
     const t = params.get('token');
