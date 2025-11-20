@@ -322,19 +322,16 @@ const TASKS = [
 ];
 
 const STORAGE_KEY = 'priority_roadmap_v1';
-const BACKUP_KEY  = 'priority_roadmap_v1_backup';
 const CLOUD_TOKEN_KEY = 'priority_roadmap_gist_token';
 const CLOUD_GISTID_KEY = 'priority_roadmap_gist_id';
 const CLOUD_FILENAME = 'priority_roadmap.json';
 const CLOUD_DESCRIPTION = 'Priority Roadmap — auto-sync backup (private)';
 
-// --- FIXED DATE FUNCTION ---
 function todayISO(){ 
   const d = new Date();
   const offsetDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
   return offsetDate.toISOString().slice(0, 10);
 }
-
 function weekKey(dateISO){ const d=new Date(dateISO+'T00:00:00'); const day=(d.getDay()+6)%7; const monday=new Date(d); monday.setDate(d.getDate()-day); monday.setHours(0,0,0,0); return monday.toISOString().slice(0,10); }
 
 function ensureStoreShape(store){
@@ -342,7 +339,6 @@ function ensureStoreShape(store){
   TASKS.forEach(t => { if (!Array.isArray(out[t.id])) out[t.id] = []; });
   return out;
 }
-
 function mergeStores(base,incoming){
   const out = Object.assign({}, base);
   incoming = ensureStoreShape(incoming);
@@ -354,27 +350,11 @@ function mergeStores(base,incoming){
   });
   return out;
 }
-
-function saveData(d){
-  try {
-    const str = JSON.stringify(d);
-    localStorage.setItem(STORAGE_KEY, str);
-    localStorage.setItem(BACKUP_KEY, str);
-  } catch(e){ console.error('saveData error', e); }
-}
-
+function saveData(d){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e){ console.error('saveData error', e); } }
 function loadData(){
   const raw = localStorage.getItem(STORAGE_KEY);
-  if(!raw){
-    const bak = localStorage.getItem(BACKUP_KEY);
-    if(bak){ try{ return ensureStoreShape(JSON.parse(bak)); }catch(e){} }
-    const obj={}; TASKS.forEach(t=>obj[t.id]=[]); return obj;
-  }
-  try{ const parsed = JSON.parse(raw); return ensureStoreShape(parsed); } catch(e){
-    const bak = localStorage.getItem(BACKUP_KEY);
-    if(bak){ try{ return ensureStoreShape(JSON.parse(bak)); }catch(be){} }
-    const obj={}; TASKS.forEach(t=>obj[t.id]=[]); return obj;
-  }
+  if(!raw){ const obj={}; TASKS.forEach(t=>obj[t.id]=[]); return obj; }
+  try{ return ensureStoreShape(JSON.parse(raw)); } catch(e){ const obj={}; TASKS.forEach(t=>obj[t.id]=[]); return obj; }
 }
 
 let STORE = loadData();
@@ -386,17 +366,14 @@ function getCloudGistId(){ return localStorage.getItem(CLOUD_GISTID_KEY) || null
 function setCloudGistId(id){ if(id) localStorage.setItem(CLOUD_GISTID_KEY, id); else localStorage.removeItem(CLOUD_GISTID_KEY); }
 function cloudEnabled(){ return !!getCloudToken(); }
 
-// --- UPDATED: Find existing gist before creating ---
 async function findExistingGist(token) {
   const url = 'https://api.github.com/gists';
   const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
   if(!res.ok) return null;
   const gists = await res.json();
-  // Look for a gist containing our specific filename
   const found = gists.find(g => g.files && g.files[CLOUD_FILENAME]);
   return found ? found.id : null;
 }
-
 async function createGist(token, contentStr){
   const url = 'https://api.github.com/gists';
   const body = { description: CLOUD_DESCRIPTION, public: false, files: { [CLOUD_FILENAME]: { content: contentStr } } };
@@ -404,7 +381,6 @@ async function createGist(token, contentStr){
   if(!res.ok) throw new Error('Create gist failed');
   return await res.json();
 }
-
 async function updateGist(token, gistId, contentStr){
   const url = `https://api.github.com/gists/${gistId}`;
   const body = { files: { [CLOUD_FILENAME]: { content: contentStr } } };
@@ -412,7 +388,6 @@ async function updateGist(token, gistId, contentStr){
   if(!res.ok) throw new Error('Update gist failed');
   return await res.json();
 }
-
 async function fetchGistContent(token, gistId){
   const url = `https://api.github.com/gists/${gistId}`;
   const res = await fetch(url, { headers: { 'Authorization': 'token ' + token } });
@@ -422,151 +397,70 @@ async function fetchGistContent(token, gistId){
   return data.files[CLOUD_FILENAME].content;
 }
 
-function debounce(fn, wait){
-  let t = null;
-  return (...args)=>{ if(t) clearTimeout(t); t = setTimeout(()=>fn(...args), wait); };
-}
+function debounce(fn, wait){ let t = null; return (...args)=>{ if(t) clearTimeout(t); t = setTimeout(()=>fn(...args), wait); }; }
 
 let scheduledCloudSave = debounce(async () => {
   if(!cloudEnabled()) { setSyncStatus('disabled'); return; }
   const token = getCloudToken();
   let gistId = getCloudGistId();
   const contentStr = JSON.stringify(STORE, null, 2);
-  
   try{
     setSyncStatus('saving...');
-    // If we have token but no ID, try to find or create
     if(!gistId){
       gistId = await findExistingGist(token);
-      if(gistId){
-         setCloudGistId(gistId);
-      } else {
-         const created = await createGist(token, contentStr);
-         setCloudGistId(created.id);
-         gistId = created.id;
-      }
+      if(gistId) setCloudGistId(gistId);
+      else { const created = await createGist(token, contentStr); setCloudGistId(created.id); gistId = created.id; }
     }
-    
     await updateGist(token, gistId, contentStr);
     setSyncStatus('synced');
-  } catch(err){
-    console.error('Cloud save failed', err);
-    setSyncStatus('error');
-  }
-}, 2000); // Increased to 2s to be safer with rate limits
+  } catch(err){ console.error('Cloud save failed', err); setSyncStatus('error'); }
+}, 2000);
 
 async function loadFromCloudAndMerge(){
   if(!cloudEnabled()) return;
   const token = getCloudToken();
   let gistId = getCloudGistId();
-  
-  // Auto-discovery if ID missing
-  if(!gistId) {
-      try {
-        gistId = await findExistingGist(token);
-        if(gistId) setCloudGistId(gistId);
-      } catch(e) { console.error(e); }
-  }
-
+  if(!gistId) { try { gistId = await findExistingGist(token); if(gistId) setCloudGistId(gistId); } catch(e) { console.error(e); } }
   if(!gistId) { setSyncStatus('no gist'); return; }
-  
   try{
     setSyncStatus('loading...');
     const content = await fetchGistContent(token, gistId);
-    const parsed = JSON.parse(content);
-    STORE = mergeStores(STORE, ensureStoreShape(parsed));
+    STORE = mergeStores(STORE, ensureStoreShape(JSON.parse(content)));
     saveData(STORE);
     renderAll();
     setSyncStatus('synced');
-  } catch(err){
-    console.error('Cloud load failed', err);
-    setSyncStatus('error');
-  }
+  } catch(err){ console.error('Cloud load failed', err); setSyncStatus('error'); }
 }
 
-// UI Components
 function createSyncControls(){
   const header = document.querySelector('header');
   const ctr = document.createElement('div');
-  ctr.style.marginTop = '15px';
-  ctr.style.display = 'flex';
-  ctr.style.gap = '8px';
-  ctr.style.justifyContent = 'center';
-  ctr.style.flexWrap = 'wrap';
-
+  ctr.style.marginTop = '15px'; ctr.style.display = 'flex'; ctr.style.gap = '8px'; ctr.style.justifyContent = 'center'; ctr.style.flexWrap = 'wrap';
   const btnEnable = document.createElement('button');
   btnEnable.className = 'btn btn-primary';
-  btnEnable.textContent = cloudEnabled() ? 'Cloud Sync: On' : 'Enable Cloud Sync';
-  
+  btnEnable.id = 'syncBtn';
+  // btnEnable.textContent = cloudEnabled() ? 'Cloud Sync: On' : 'Enable Cloud Sync';
   btnEnable.onclick = async ()=>{
-    if(cloudEnabled()){
-      if(confirm('Disable cloud sync on this device?')) {
-        setCloudToken(null); setCloudGistId(null); setSyncStatus('disabled'); btnEnable.textContent = 'Enable Cloud Sync';
-      }
-      return;
-    }
+    if(cloudEnabled()){ if(confirm('Disable sync?')) { setCloudToken(null); setCloudGistId(null); setSyncStatus('disabled'); btnEnable.textContent = 'Enable Cloud Sync'; } return; }
     const token = prompt('Paste GitHub Token (gist permission):');
     if(!token) return;
-    
     btnEnable.textContent = 'Connecting...';
     setCloudToken(token.trim());
-    
-    // Try to find existing gist first
-    try {
-        const existingId = await findExistingGist(token.trim());
-        if(existingId) {
-            setCloudGistId(existingId);
-            await loadFromCloudAndMerge(); // Pull down existing data
-            alert('Found existing roadmap Gist! Synced successfully.');
-        } else {
-            // Create new
-            const created = await createGist(token.trim(), JSON.stringify(STORE, null, 2));
-            setCloudGistId(created.id);
-            alert('Created new Gist storage.');
-        }
-        setSyncStatus('synced');
-        btnEnable.textContent = 'Cloud Sync: On';
-    } catch(e) {
-        alert('Connection failed. Check console.');
-        console.error(e);
-        setCloudToken(null);
-        btnEnable.textContent = 'Enable Cloud Sync';
-    }
-  };
-
-  const btnForce = document.createElement('button');
-  btnForce.className = 'btn btn-secondary';
-  btnForce.textContent = 'Force Sync';
-  btnForce.onclick = async ()=>{
-    if(!cloudEnabled()) return alert('Not enabled');
     await loadFromCloudAndMerge();
-    await scheduledCloudSave();
+    btnEnable.textContent = 'Cloud Sync: On';
   };
-
   const status = document.createElement('div');
   status.id = 'cloudSyncStatus';
-  status.style.fontSize = '12px';
-  status.style.padding = '8px';
-  status.style.borderRadius = '6px';
-  status.style.background = '#eef2ff';
+  status.style.fontSize = '12px'; status.style.padding = '8px'; status.style.borderRadius = '6px'; status.style.background = '#eef2ff';
   status.textContent = cloudEnabled() ? 'Cloud: Ready' : 'Cloud: Disabled';
-
-  ctr.appendChild(btnEnable);
-  ctr.appendChild(btnForce);
-  ctr.appendChild(status);
+  ctr.appendChild(btnEnable); ctr.appendChild(status);
   header.appendChild(ctr);
 }
+function setSyncStatus(txt){ const el = document.getElementById('cloudSyncStatus'); if(el) el.textContent = 'Cloud: ' + txt; }
 
-function setSyncStatus(txt){
-  const el = document.getElementById('cloudSyncStatus');
-  if(el) el.textContent = 'Cloud: ' + txt;
-}
-
-// App Logic
 function ticksThisWeek(id){ const arr = STORE[id]||[]; const wk=weekKey(todayISO()); return arr.filter(d=>weekKey(d)===wk).length; }
 function canTickToday(id){ const arr = STORE[id]||[]; const last = arr.length?arr[arr.length-1]:null; if(last===todayISO()) return false; if(id==='github') return ticksThisWeek(id) < 3; return true; }
 
-// Modal & Tick
 const modalBackdrop = document.getElementById('modalBackdrop');
 const modalTitle = document.getElementById('modalTitle');
 const modalMessage = document.getElementById('modalMessage');
@@ -582,36 +476,20 @@ modalConfirm?.addEventListener('click', ()=>{ if(!pendingAction) return closeMod
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 
 function performTick(id){
-  STORE[id] = STORE[id] || [];
-  STORE[id].push(todayISO());
-  STORE = mergeStores(STORE, {});
-  saveData(STORE);
-  renderAll();
-  showToast('Marked as done for today ✅');
-  if(cloudEnabled()) scheduledCloudSave();
+  STORE[id] = STORE[id] || []; STORE[id].push(todayISO()); STORE = mergeStores(STORE, {});
+  saveData(STORE); renderAll(); showToast('Marked as done for today ✅'); if(cloudEnabled()) scheduledCloudSave();
 }
-
 function performUndo(id){
-  const arr = STORE[id] || [];
-  if(!arr.length || arr[arr.length-1] !== todayISO()) return;
-  arr.pop();
-  STORE[id] = arr;
-  saveData(STORE);
-  renderAll();
-  showToast('Undo successful');
-  if(cloudEnabled()) scheduledCloudSave();
+  const arr = STORE[id] || []; if(!arr.length || arr[arr.length-1] !== todayISO()) return;
+  arr.pop(); STORE[id] = arr; saveData(STORE); renderAll(); showToast('Undo successful'); if(cloudEnabled()) scheduledCloudSave();
 }
-
 function onTickClick(id){
   const arr = STORE[id] || []; const last = arr.length?arr[arr.length-1]:null;
   if(last === todayISO()){ openModal('Undo tick?','Undo today\'s tick?',{type:'undo',id}); return; }
   if(id==='github' && ticksThisWeek(id) >= 3){ openModal('Limit reached','GitHub task already has 3 ticks this week.', {type:'noop'}); return; }
   openModal('Confirm tick','Mark as done?',{type:'tick',id});
 }
-
-function svgCheck(visible){
-  return `<svg class='check ${visible ? "visible":""}' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M20 6L9 17l-5-5' /></svg>`;
-}
+function svgCheck(visible){ return `<svg class='check ${visible ? "visible":""}' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M20 6L9 17l-5-5' /></svg>`; }
 
 function renderAll(){
   STORE = ensureStoreShape(STORE);
@@ -626,44 +504,39 @@ function renderAll(){
     div.innerHTML = `
       <div style='display:flex;gap:12px;align-items:center'>
         <div style='width:4px;height:48px;background:${isDoneToday?'var(--primary)':'#cbd5e1'};border-radius:4px'></div>
-        <div>
-          <div style='font-weight:700'>${t.title}</div>
-          <div class='meta-sub'>${t.desc}</div>
-        </div>
+        <div><div style='font-weight:700'>${t.title}</div><div class='meta-sub'>${t.desc}</div></div>
       </div>
       <div style='display:flex;align-items:center;gap:12px'>
-        <div style='text-align:right;font-size:12px;color:#94a3b8'>
-            <div>Total: <strong style="color:#475569">${arr.length}</strong></div>
-        </div>
+        <div style='text-align:right;font-size:12px;color:#94a3b8'><div>Total: <strong style="color:#475569">${arr.length}</strong></div></div>
         <button class='tick-btn' data-id='${t.id}' ${btnEnabled ? '' : 'disabled'}>
           <div class='tick-box ${isDoneToday ? 'done' : ''}'>${svgCheck(isDoneToday)}</div>
         </button>
-      </div>
-    `;
+      </div>`;
     tasksEl.appendChild(div);
   });
-
   document.getElementById('stats').innerHTML = TASKS.map(t=> `<div class='stat'><div>${t.title.split('—')[0]}</div><div><strong>${(STORE[t.id]||[]).length}</strong></div></div>`).join('');
-  
   const flat = Object.entries(STORE).flatMap(([id,arr]) => (arr||[]).map(d=>({id,date:d}))).sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('history').innerHTML = flat.slice(0,50).map(it=> `<div class='history-item'><span>${it.date}</span><span>${TASKS.find(t=>t.id===it.id)?.title||it.id}</span></div>`).join('');
-
   document.querySelectorAll('.tick-btn').forEach(btn=>{ btn.onclick = ()=>onTickClick(btn.dataset.id) });
 }
 
 // Export/Import
-document.getElementById('export').onclick = () => {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(STORE, null, 2)], {type: 'application/json'}));
-  a.download = 'priority_roadmap.json'; a.click();
-};
+document.getElementById('export').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(STORE, null, 2)], {type: 'application/json'})); a.download = 'priority_roadmap.json'; a.click(); };
 document.getElementById('import').onclick = () => document.getElementById('fileInput').click();
-document.getElementById('fileInput').onchange = (e) => {
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = (ev) => { try{ STORE = mergeStores(STORE, JSON.parse(ev.target.result)); saveData(STORE); renderAll(); if(cloudEnabled()) scheduledCloudSave(); }catch(e){alert('Invalid JSON');} };
-  r.readAsText(f);
-};
+document.getElementById('fileInput').onchange = (e) => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { try{ STORE = mergeStores(STORE, JSON.parse(ev.target.result)); saveData(STORE); renderAll(); if(cloudEnabled()) scheduledCloudSave(); }catch(e){alert('Invalid JSON');} }; r.readAsText(f); };
+
+// --- 🚀 MAGIC LINK LOGIC ---
+// 1. Check URL for ?token=ghp_xxxx
+const params = new URLSearchParams(window.location.search);
+if(params.has('token')){
+    const t = params.get('token');
+    if(t && t.startsWith('ghp_')){
+        setCloudToken(t);
+        // Remove token from URL bar so it looks clean and safe
+        window.history.replaceState({}, document.title, window.location.pathname);
+        showToast('Auto-login successful! 🔓');
+    }
+}
 
 // Init
 createSyncControls();
