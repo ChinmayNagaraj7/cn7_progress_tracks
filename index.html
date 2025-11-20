@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>50 LPA Roadmap — Priority Tracker</title>
   <style>
-    :root {
+   :root {
       /* Dark Mode Palette */
       --bg-dark: #0f172a;       /* Deep Slate */
       --card-dark: #1e293b;     /* Lighter Slate */
@@ -268,7 +268,6 @@
         </div>
 
         <h3 style="margin-top:14px; font-size: 24px;" >Daily Tasks 🤑</h3>
-        
         <div class="tasks" id="tasks"></div>
 
         <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -276,11 +275,14 @@
           <button class="btn btn-secondary" id="import">Import Progress</button>
           <input type="file" id="fileInput" accept="application/json" style="display:none" />
         </div>
-
       </div>
 
       <div class="card">
         <h2>Quick Stats</h2>
+        <div class="streak-stat" id="streakDisplay">
+            <span>🔥 Daily Streak</span>
+            <span style="font-size:18px" id="streakCount">0 Days</span>
+        </div>
         <div class="stats" id="stats"></div>
         <h3 style="margin-top:12px">Recent History</h3>
         <div class="history" id="history"></div>
@@ -288,56 +290,8 @@
     </div>
 
     <div style="margin-top:18px" class="card">
-      <h2>PROJECTS AND SKILLS NEED TO BE DONE </h2>
-      <style>
-    .roadmap-container {
-        max-width: 900px;
-        margin: 40px auto;
-        padding: 25px;
-        border-radius: 15px;
-        background: #f7f7f7;
-        font-family: Arial, Helvetica, sans-serif;
-        line-height: 1.7;
-        color: #222;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
-    }
-
-    .roadmap-container h2 {
-        text-align: center;
-        margin-bottom: 20px;
-        color: #333;
-    }
-
-    .phase-title {
-        font-size: 22px;
-        font-weight: bold;
-        margin-top: 30px;
-        color: #2e59d9;
-    }
-
-    .sub-title {
-        font-size: 18px;
-        font-weight: bold;
-        margin-top: 15px;
-        color: #444;
-    }
-
-    .roadmap-container p {
-        margin: 10px 0;
-    }
-
-    .highlight {
-        background: #eaf1ff;
-        padding: 5px 10px;
-        border-radius: 6px;
-        display: inline-block;
-        margin-top: 8px;
-    }
-</style>
-
-<div class="roadmap-container">
-
-    <h2>🚀 Full 2-Year Backend + DSA Roadmap (Readable & Beautiful Format)</h2>
+      <div class="roadmap-container">
+        <h2>🚀 Full 2-Year Backend + DSA Roadmap (Readable & Beautiful Format)</h2>
 
     <div class="phase-title">📌 Phase 1 (Month 1–3): Foundations + DSA Start</div>
 
@@ -481,12 +435,16 @@
     </p>
 
 </div>
-
+    </div>
   </div>
 
   <div class="toast" id="toast">Marked as done for today ✅</div>
 
-  <!-- Modal -->
+  <div class="streak-overlay" id="streakAnim">
+    <div class="streak-emoji">👨‍💻</div>
+    <div class="streak-text">Streak Continued!<br>Keep Grinding! 🚀</div>
+  </div>
+
   <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" style="display:none">
     <div class="modal" id="modal">
       <h3 id="modalTitle">Confirm</h3>
@@ -499,18 +457,17 @@
   </div>
 
 <script>
-/* CONFIGURATION & DATA 
-*/
+/* CONFIGURATION & DATA */
 const TASKS = [
-  { id: 'backend', title: '📒 Backend + System Design', desc: 'Deep projects: scalable services, queues, caching' },
-  { id: 'dsa_problems', title: '🖊 DSA (C++)  (Problems)', desc: 'Focused problem solving: 200–250 quality problems' },
-  { id: 'dsa_learning', title: '📖 DSA  (Learning)', desc: 'Theory learning and understanding the concepts' },
-  { id: 'cs', title: '📒 CS Fundamentals', desc: 'OS/DBMS/Networks/System design basics' },
-  { id: 'python_learning', title: '📖 Python (Learning)', desc: 'Core syntax, stdlib, OOP, idiomatic Python' },
-  { id: 'python_projects', title: '🖊 Python  (Projects)', desc: 'Build mini-projects: scripts, automation, small apps' },
-  { id: 'webdev_project', title: '🖊 Web Dev  (Project)', desc: 'Build a full-stack project: deploy, README, tests' },
-  { id: 'github', title: '📒 GitHub & Resume', desc: 'Polish docs, README, resume' },
-  { id: 'wedev', title: '📖 Web Dev (Learning)', desc: 'Learning about the concepts' }
+  { id: 'backend', title: '📒Backend + System Design', desc: 'Deep projects: scalable services, queues, caching' },
+  { id: 'dsa_problems', title: '🖊DSA (C++)  (Problems)', desc: 'Focused problem solving: 200–250 quality problems' },
+  { id: 'dsa_learning', title: '📖DSA  (Learning)', desc: 'Theory learning and understanding the concepts' },
+  { id: 'cs', title: '📒CS Fundamentals', desc: 'OS/DBMS/Networks/System design basics' },
+  { id: 'python_learning', title: '📖Python (Learning)', desc: 'Core syntax, stdlib, OOP, idiomatic Python' },
+  { id: 'python_projects', title: '🖊Python  (Projects)', desc: 'Build mini-projects: scripts, automation, small apps' },
+  { id: 'webdev_project', title: '🖊Web Dev  (Project)', desc: 'Build a full-stack project: deploy, README, tests' },
+  { id: 'github', title: '📒GitHub & Resume', desc: 'Polish docs, README, resume' },
+  { id: 'wedev', title: '📖Web Dev (Learning)', desc: 'Learning about the concepts' }
 ];
 
 const STORAGE_KEY = 'priority_roadmap_v1';
@@ -519,8 +476,7 @@ const CLOUD_GISTID_KEY = 'priority_roadmap_gist_id';
 const CLOUD_FILENAME = 'priority_roadmap.json';
 const CLOUD_DESCRIPTION = 'Priority Roadmap — auto-sync backup (private)';
 
-/* DATE UTILS 
-*/
+/* DATE UTILS */
 function todayISO(){ 
   const d = new Date();
   const offsetDate = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
@@ -528,23 +484,10 @@ function todayISO(){
 }
 function weekKey(dateISO){ const d=new Date(dateISO+'T00:00:00'); const day=(d.getDay()+6)%7; const monday=new Date(d); monday.setDate(d.getDate()-day); monday.setHours(0,0,0,0); return monday.toISOString().slice(0,10); }
 
-/* DATA MANAGEMENT 
-*/
+/* DATA MANAGEMENT */
 function ensureStoreShape(store){
   const out = Object.assign({}, store);
   TASKS.forEach(t => { if (!Array.isArray(out[t.id])) out[t.id] = []; });
-  return out;
-}
-// Only used for internal logic, not for cloud loading anymore
-function mergeStores(base,incoming){
-  const out = Object.assign({}, base);
-  incoming = ensureStoreShape(incoming);
-  TASKS.forEach(t=>{
-    const a = Array.isArray(out[t.id]) ? out[t.id].slice() : [];
-    const b = Array.isArray(incoming[t.id]) ? incoming[t.id].slice() : [];
-    const set = new Set([...(a||[]), ...(b||[])]);
-    out[t.id] = Array.from(set).sort((x,y)=>x.localeCompare(y));
-  });
   return out;
 }
 function saveData(d){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e){ console.error('saveData error', e); } }
@@ -556,8 +499,7 @@ function loadData(){
 
 let STORE = loadData();
 
-/* CLOUD SYNC (API) 
-*/
+/* CLOUD SYNC (API) */
 function getCloudToken(){ return localStorage.getItem(CLOUD_TOKEN_KEY) || null; }
 function setCloudToken(token){ if(token) localStorage.setItem(CLOUD_TOKEN_KEY, token); else localStorage.removeItem(CLOUD_TOKEN_KEY); }
 function getCloudGistId(){ return localStorage.getItem(CLOUD_GISTID_KEY) || null; }
@@ -600,17 +542,13 @@ async function fetchGistContent(token, gistId){
 
 function debounce(fn, wait){ let t = null; return (...args)=>{ if(t) clearTimeout(t); t = setTimeout(()=>fn(...args), wait); }; }
 
-/* SYNC LOGIC 
-*/
+/* SYNC LOGIC */
 let scheduledCloudSave = debounce(async () => {
   if(!cloudEnabled()) { setSyncStatus('Offline', 'offline'); return; }
-  
   setSyncStatus('Saving...', 'working');
-  
   const token = getCloudToken();
   let gistId = getCloudGistId();
   const contentStr = JSON.stringify(STORE, null, 2);
-  
   try{
     if(!gistId){
       gistId = await findExistingGist(token);
@@ -627,27 +565,19 @@ let scheduledCloudSave = debounce(async () => {
 
 async function loadFromCloudAndMerge(){
   if(!cloudEnabled()) { setSyncStatus('Offline', 'offline'); return; }
-  
   setSyncStatus('Loading...', 'working');
-  
   const token = getCloudToken();
   let gistId = getCloudGistId();
-  
   try{
       if(!gistId) { 
           gistId = await findExistingGist(token); 
           if(gistId) setCloudGistId(gistId); 
       }
       if(!gistId) { setSyncStatus('No Data Found', 'error'); return; }
-
       const content = await fetchGistContent(token, gistId);
       const parsed = JSON.parse(content);
-      
-      // --- 🔥 THE FIX IS HERE 🔥 ---
-      // Instead of merging, we overwrite local with cloud.
-      // This ensures deletions (unticks) are respected.
+      // OVERWRITE LOCAL WITH CLOUD (Authority)
       STORE = ensureStoreShape(parsed);
-      
       saveData(STORE);
       renderAll();
       setSyncStatus('Cloud Synced', 'success');
@@ -657,8 +587,7 @@ async function loadFromCloudAndMerge(){
   }
 }
 
-/* UI COMPONENTS 
-*/
+/* UI COMPONENTS */
 function createSyncControls(){
   const header = document.querySelector('header');
   const badge = document.createElement('div');
@@ -681,6 +610,7 @@ function setSyncStatus(msg, type){
   if(badge && text){
       text.textContent = msg;
       badge.className = 'status-badge';
+      badge.classList.remove('success', 'working', 'error', 'offline');
       if(type) badge.classList.add(type);
   }
 }
@@ -702,11 +632,70 @@ modalConfirm?.addEventListener('click', ()=>{ if(!pendingAction) return closeMod
 
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 
-function performTick(id){
-  STORE[id] = STORE[id] || []; STORE[id].push(todayISO()); 
-  // removed merge here, just simple assignment
-  saveData(STORE); renderAll(); showToast('Marked as done for today ✅'); if(cloudEnabled()) scheduledCloudSave();
+/* --- 🔥 NEW: STREAK LOGIC --- */
+function getAllCompletedDates(){
+    const s = new Set();
+    Object.values(STORE).forEach(arr => {
+        if(Array.isArray(arr)) arr.forEach(d => s.add(d));
+    });
+    return Array.from(s).sort((a,b) => b.localeCompare(a)); // Descending
 }
+
+function calculateStreak(){
+    const dates = getAllCompletedDates();
+    if(dates.length === 0) return 0;
+
+    let streak = 0;
+    const today = todayISO();
+    
+    // Check if today is done
+    let currentCheck = dates.includes(today) ? new Date(today) : new Date(new Date().setDate(new Date().getDate() - 1));
+    
+    // If no tasks today OR yesterday, streak is 0
+    const yestISO = new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0,10);
+    if(!dates.includes(today) && !dates.includes(yestISO)) return 0;
+
+    // Count backwards
+    while(true){
+        const checkISO = currentCheck.toISOString().slice(0,10);
+        if(dates.includes(checkISO)){
+            streak++;
+            currentCheck.setDate(currentCheck.getDate() - 1);
+        } else {
+            break;
+        }
+    }
+    return streak;
+}
+
+function triggerStreakAnimation(){
+    const overlay = document.getElementById('streakAnim');
+    overlay.classList.add('show');
+    setTimeout(() => {
+        overlay.classList.remove('show');
+    }, 3000); // Play for 3 seconds
+}
+
+function performTick(id){
+  // Check if this is the FIRST task of the day
+  const tasksDoneTodayBefore = getAllCompletedDates().filter(d => d === todayISO()).length;
+  const isFirstTask = tasksDoneTodayBefore === 0; // Technically existing store logic separates IDs, but simplistic check: if todayISO isn't in ALL dates list (which is unique set)
+  // Better check:
+  const alreadyHasToday = Object.values(STORE).some(arr => arr && arr.includes(todayISO()));
+
+  STORE[id] = STORE[id] || []; STORE[id].push(todayISO()); 
+  saveData(STORE); 
+  renderAll(); 
+  
+  if(!alreadyHasToday) {
+      triggerStreakAnimation(); // 🔥 Trigger Animation!
+  } else {
+      showToast('Marked as done for today ✅');
+  }
+
+  if(cloudEnabled()) scheduledCloudSave();
+}
+
 function performUndo(id){
   const arr = STORE[id] || []; if(!arr.length || arr[arr.length-1] !== todayISO()) return;
   arr.pop(); STORE[id] = arr; saveData(STORE); renderAll(); showToast('Undo successful'); if(cloudEnabled()) scheduledCloudSave();
@@ -742,16 +731,21 @@ function renderAll(){
       </div>`;
     tasksEl.appendChild(div);
   });
-  document.getElementById('stats').innerHTML = TASKS.map(t=> `<div class='stat'><div>${t.title.split('—')[0]}</div><div><strong>${(STORE[t.id]||[]).length}</strong></div></div>`).join('');
+  
+  document.getElementById('stats').innerHTML = TASKS.map(t=> `<div class='stat'><div>${t.title}</div><div><strong>${(STORE[t.id]||[]).length}</strong></div></div>`).join('');
+  
   const flat = Object.entries(STORE).flatMap(([id,arr]) => (arr||[]).map(d=>({id,date:d}))).sort((a,b)=>b.date.localeCompare(a.date));
   document.getElementById('history').innerHTML = flat.slice(0,50).map(it=> `<div class='history-item'><span>${it.date}</span><span>${TASKS.find(t=>t.id===it.id)?.title||it.id}</span></div>`).join('');
   document.querySelectorAll('.tick-btn').forEach(btn=>{ btn.onclick = ()=>onTickClick(btn.dataset.id) });
+
+  // UPDATE STREAK DISPLAY
+  document.getElementById('streakCount').innerText = calculateStreak() + " Days";
 }
 
 // Export/Import
 document.getElementById('export').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(STORE, null, 2)], {type: 'application/json'})); a.download = 'priority_roadmap.json'; a.click(); };
 document.getElementById('import').onclick = () => document.getElementById('fileInput').click();
-document.getElementById('fileInput').onchange = (e) => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { try{ STORE = mergeStores(STORE, JSON.parse(ev.target.result)); saveData(STORE); renderAll(); if(cloudEnabled()) scheduledCloudSave(); }catch(e){alert('Invalid JSON');} }; r.readAsText(f); };
+document.getElementById('fileInput').onchange = (e) => { const f = e.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = (ev) => { try{ STORE = ensureStoreShape(JSON.parse(ev.target.result)); saveData(STORE); renderAll(); if(cloudEnabled()) scheduledCloudSave(); }catch(e){alert('Invalid JSON');} }; r.readAsText(f); };
 
 // --- LOGIN LOGIC ---
 const params = new URLSearchParams(window.location.search);
@@ -771,3 +765,4 @@ renderAll();
 if(cloudEnabled()) loadFromCloudAndMerge();
 </script>
 </body>
+</html>
