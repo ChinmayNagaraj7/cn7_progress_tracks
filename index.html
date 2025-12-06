@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>50 LPA Roadmap — Priority Tracker</title>
+  <title>50 LPA Roadmap — Priority Tracker v2</title>
   <style>
    :root {
       /* Dark Mode Palette */
@@ -11,6 +11,7 @@
       --card-dark: #1e293b;     /* Lighter Slate */
       --primary: #818cf8;       /* Indigo */
       --accent: #2dd4bf;        /* Teal */
+      --gold: #fbbf24;          /* Gold for High Score */
       --text-main: #f8fafc;     /* White-ish */
       --text-sub: #94a3b8;      /* Grey */
       
@@ -26,7 +27,6 @@
       background-color: var(--bg-dark);
       color: var(--text-main);
       min-height: 100vh;
-      /* Subtle subtle grid background */
       background-image: 
         linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
@@ -71,6 +71,7 @@
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
       position: relative;
       overflow: hidden;
+      margin-bottom: 24px;
     }
 
     h2 { 
@@ -154,10 +155,18 @@
       background: linear-gradient(135deg, #3b0764 0%, #7e22ce 100%);
       color: #f3e8ff;
       padding: 16px; border-radius: 14px; margin-bottom: 20px;
-      font-weight: 700; display: flex; align-items: center; justify-content: space-between;
       box-shadow: 0 4px 15px rgba(126, 34, 206, 0.3);
       border: 1px solid rgba(255,255,255,0.1);
     }
+
+    .streak-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px;
+    }
+    .streak-row:last-child { margin-bottom: 0; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); }
+    .streak-label { font-size: 13px; opacity: 0.9; }
+    .streak-val { font-size: 18px; font-weight: 700; }
+    .high-score { color: var(--gold); text-shadow: 0 0 10px rgba(251, 191, 36, 0.4); }
 
     .stat {
       display: flex; justify-content: space-between; font-size: 13px;
@@ -176,6 +185,33 @@
     }
     .history-item span:last-child { color: var(--text-main); }
 
+    /* LINK MANAGER STYLES */
+    .link-input-group {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .link-input {
+      flex: 1; background: #0f172a; border: 1px solid #475569;
+      color: white; padding: 10px; border-radius: 8px; font-family: inherit; font-size: 13px;
+    }
+    .link-input:focus { outline: none; border-color: var(--primary); }
+    
+    .link-list { display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; }
+    .link-item {
+      background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+      border: 1px solid transparent; font-size: 13px;
+    }
+    .link-item:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); }
+    .link-content { flex: 1; word-break: break-all; color: white; font-size: medium; line-height: 1.4; }
+    .link-content a { color: var(--accent); text-decoration: none; }
+    .link-content a:hover { text-decoration: underline; }
+    
+    .del-btn {
+      background: transparent; border: none; color: #ef4444; 
+      cursor: pointer; opacity: 0.6; padding: 4px; border-radius: 4px;
+    }
+    .del-btn:hover { opacity: 1; background: rgba(239, 68, 68, 0.1); }
+
     /* BUTTONS */
     .btn {
       padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer;
@@ -187,6 +223,7 @@
     .btn-primary:hover { background: #a5b4fc; transform: translateY(-2px); }
     .btn-secondary { background: transparent; color: var(--text-sub); border: 1px solid #475569; }
     .btn-secondary:hover { border-color: var(--text-main); color: var(--text-main); }
+    .btn-sm { padding: 8px 12px; font-size: 12px; }
 
     /* ROADMAP STYLES */
     .roadmap-container { margin-top: 10px; }
@@ -242,16 +279,12 @@
       border: 1px solid var(--card-border); text-align: center;
     }
     
-    /* Entry Animation */
-    .animate-entry { opacity: 0; animation: fadeInUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
-    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
     @media(max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <header>
-    <h1>🚀 Priority Roadmap — Tracker</h1>
+    <h1>🚀 Priority Roadmap — Tracker v2</h1>
     <p style="margin:6px 0 0;opacity:.95">Follow the high-impact 3-hour plan: backend & system design, DSA, CS fundamentals, and GitHub/resume.</p>
   </header>
 
@@ -277,15 +310,36 @@
         </div>
       </div>
 
-      <div class="card">
-        <h2>Quick Stats</h2>
-        <div class="streak-stat" id="streakDisplay">
-            <span>🔥 Daily Streak</span>
-            <span style="font-size:18px" id="streakCount">0 Days</span>
+      <div>
+        <div class="card">
+          <h2>Quick Stats</h2>
+          <div class="streak-stat" id="streakDisplay">
+             <div class="streak-row">
+                <span class="streak-label">🔥 Current Streak</span>
+                <span class="streak-val" id="streakCount">0 Days</span>
+             </div>
+             <div class="streak-row">
+                <span class="streak-label">🏆 Highest Streak</span>
+                <span class="streak-val high-score" id="highScoreCount">0 Days</span>
+             </div>
+          </div>
+          <div class="stats" id="stats"></div>
+          <h3 style="margin-top:12px">Recent History</h3>
+          <div class="history" id="history"></div>
         </div>
-        <div class="stats" id="stats"></div>
-        <h3 style="margin-top:12px">Recent History</h3>
-        <div class="history" id="history"></div>
+
+        <div class="card">
+          <h2>🔗 Quick Links & Notes</h2>
+          <p style="font-size:12px; color:var(--text-sub); margin-bottom:12px;">Paste URLs or type quick todos. Links become clickable automatically.</p>
+          
+          <div class="link-input-group">
+            <input type="text" id="linkInput" class="link-input" placeholder="Paste link or text here..." />
+            <button class="btn btn-primary btn-sm" id="addLinkBtn">Add</button>
+          </div>
+          
+          <div class="link-list" id="linkList">
+            </div>
+        </div>
       </div>
     </div>
 
@@ -470,7 +524,7 @@ const TASKS = [
   { id: 'wedev', title: '📖Web Dev (Learning)', desc: 'Learning about the concepts' }
 ];
 
-const STORAGE_KEY = 'priority_roadmap_v1';
+const STORAGE_KEY = 'priority_roadmap_v2';
 const CLOUD_TOKEN_KEY = 'priority_roadmap_gist_token';
 const CLOUD_GISTID_KEY = 'priority_roadmap_gist_id';
 const CLOUD_FILENAME = 'priority_roadmap.json';
@@ -488,13 +542,16 @@ function weekKey(dateISO){ const d=new Date(dateISO+'T00:00:00'); const day=(d.g
 function ensureStoreShape(store){
   const out = Object.assign({}, store);
   TASKS.forEach(t => { if (!Array.isArray(out[t.id])) out[t.id] = []; });
+  // New Fields initialization
+  if(!Array.isArray(out.resources)) out.resources = [];
+  if(typeof out.bestStreak !== 'number') out.bestStreak = 0;
   return out;
 }
 function saveData(d){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch(e){ console.error('saveData error', e); } }
 function loadData(){
   const raw = localStorage.getItem(STORAGE_KEY);
-  if(!raw){ const obj={}; TASKS.forEach(t=>obj[t.id]=[]); return obj; }
-  try{ return ensureStoreShape(JSON.parse(raw)); } catch(e){ const obj={}; TASKS.forEach(t=>obj[t.id]=[]); return obj; }
+  if(!raw){ const obj={resources:[], bestStreak:0}; TASKS.forEach(t=>obj[t.id]=[]); return obj; }
+  try{ return ensureStoreShape(JSON.parse(raw)); } catch(e){ const obj={resources:[], bestStreak:0}; TASKS.forEach(t=>obj[t.id]=[]); return obj; }
 }
 
 let STORE = loadData();
@@ -632,10 +689,12 @@ modalConfirm?.addEventListener('click', ()=>{ if(!pendingAction) return closeMod
 
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
 
-/* --- 🔥 NEW: STREAK LOGIC --- */
+/* --- 🔥 STREAK LOGIC --- */
 function getAllCompletedDates(){
     const s = new Set();
-    Object.values(STORE).forEach(arr => {
+    // Only check actual TASK keys, ignore 'resources' or 'bestStreak'
+    TASKS.forEach(t => {
+        const arr = STORE[t.id];
         if(Array.isArray(arr)) arr.forEach(d => s.add(d));
     });
     return Array.from(s).sort((a,b) => b.localeCompare(a)); // Descending
@@ -655,7 +714,6 @@ function calculateStreak(){
     const yestISO = new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().slice(0,10);
     if(!dates.includes(today) && !dates.includes(yestISO)) return 0;
 
-    // Count backwards
     while(true){
         const checkISO = currentCheck.toISOString().slice(0,10);
         if(dates.includes(checkISO)){
@@ -677,18 +735,22 @@ function triggerStreakAnimation(){
 }
 
 function performTick(id){
-  // Check if this is the FIRST task of the day
   const tasksDoneTodayBefore = getAllCompletedDates().filter(d => d === todayISO()).length;
-  const isFirstTask = tasksDoneTodayBefore === 0; // Technically existing store logic separates IDs, but simplistic check: if todayISO isn't in ALL dates list (which is unique set)
-  // Better check:
-  const alreadyHasToday = Object.values(STORE).some(arr => arr && arr.includes(todayISO()));
+  const alreadyHasToday = tasksDoneTodayBefore > 0;
 
   STORE[id] = STORE[id] || []; STORE[id].push(todayISO()); 
+  
+  // Update High Score
+  const currentStreak = calculateStreak();
+  if(currentStreak > (STORE.bestStreak || 0)) {
+     STORE.bestStreak = currentStreak;
+  }
+  
   saveData(STORE); 
   renderAll(); 
   
   if(!alreadyHasToday) {
-      triggerStreakAnimation(); // 🔥 Trigger Animation!
+      triggerStreakAnimation(); 
   } else {
       showToast('Marked as done for today ✅');
   }
@@ -707,6 +769,56 @@ function onTickClick(id){
   openModal('Confirm tick','Mark as done?',{type:'tick',id});
 }
 function svgCheck(visible){ return `<svg class='check ${visible ? "visible":""}' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><path fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M20 6L9 17l-5-5' /></svg>`; }
+
+/* --- 🔗 LINK MANAGER LOGIC --- */
+function detectURL(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.replace(urlRegex, function(url) {
+    return `<a href="${url}" target="_blank">${url}</a>`;
+  });
+}
+
+function addLink() {
+  const input = document.getElementById('linkInput');
+  const val = input.value.trim();
+  if(!val) return;
+  
+  STORE.resources = STORE.resources || [];
+  STORE.resources.unshift({ id: Date.now(), text: val }); // Add to top
+  input.value = '';
+  saveData(STORE);
+  renderResources();
+  if(cloudEnabled()) scheduledCloudSave();
+}
+
+function deleteLink(id) {
+  STORE.resources = STORE.resources.filter(r => r.id !== id);
+  saveData(STORE);
+  renderResources();
+  if(cloudEnabled()) scheduledCloudSave();
+}
+
+function renderResources() {
+  const list = document.getElementById('linkList');
+  list.innerHTML = '';
+  const arr = STORE.resources || [];
+  if(arr.length === 0) {
+      list.innerHTML = '<div style="text-align:center; color:var(--text-sub); font-size:12px; padding:10px;">No links yet.</div>';
+      return;
+  }
+  arr.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'link-item';
+    div.innerHTML = `
+      <div class="link-content">${detectURL(item.text)}</div>
+      <button class="del-btn" onclick="deleteLink(${item.id})">🗑</button>
+    `;
+    list.appendChild(div);
+  });
+}
+document.getElementById('addLinkBtn').onclick = addLink;
+document.getElementById('linkInput').onkeypress = (e) => { if(e.key === 'Enter') addLink(); };
+
 
 function renderAll(){
   STORE = ensureStoreShape(STORE);
@@ -734,12 +846,23 @@ function renderAll(){
   
   document.getElementById('stats').innerHTML = TASKS.map(t=> `<div class='stat'><div>${t.title}</div><div><strong>${(STORE[t.id]||[]).length}</strong></div></div>`).join('');
   
-  const flat = Object.entries(STORE).flatMap(([id,arr]) => (arr||[]).map(d=>({id,date:d}))).sort((a,b)=>b.date.localeCompare(a.date));
+  const flat = Object.entries(STORE)
+    .filter(([k]) => TASKS.some(t => t.id === k)) // Only tasks
+    .flatMap(([id,arr]) => (arr||[]).map(d=>({id,date:d})))
+    .sort((a,b)=>b.date.localeCompare(a.date));
+
   document.getElementById('history').innerHTML = flat.slice(0,50).map(it=> `<div class='history-item'><span>${it.date}</span><span>${TASKS.find(t=>t.id===it.id)?.title||it.id}</span></div>`).join('');
   document.querySelectorAll('.tick-btn').forEach(btn=>{ btn.onclick = ()=>onTickClick(btn.dataset.id) });
 
   // UPDATE STREAK DISPLAY
-  document.getElementById('streakCount').innerText = calculateStreak() + " Days";
+  const currentS = calculateStreak();
+  // Ensure high score is at least current streak
+  if(currentS > (STORE.bestStreak || 0)) STORE.bestStreak = currentS;
+  
+  document.getElementById('streakCount').innerText = currentS + " Days";
+  document.getElementById('highScoreCount').innerText = (STORE.bestStreak || 0) + " Days";
+  
+  renderResources();
 }
 
 // Export/Import
